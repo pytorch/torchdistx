@@ -1,0 +1,10 @@
+cuda:
+  - 11.3                  # [linux64]
+cuda_home:
+  - /usr/local/cuda-11.3  # [linux64]
+cudnn:
+  - 8.2.0                 # [linux64]
+cxx_compiler_version:
+  - 9.4.0                 # [linux64]
+pytorch_variant:
+  - cuda                  # [linux64]
