@@ -1,0 +1,12 @@
+black==22.1
+cmake==3.21.0
+flake8==4.0.1
+isort==5.10.1
+mypy==0.931
+ninja==1.10.2
+pip==22.0.3
+pytest==7.0.1
+setuptools==60.9.3
+shellcheck-py=0.8.0
+types-setuptools==57.4.9
+wheel==0.37.1

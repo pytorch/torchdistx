@@ -1,0 +1,54 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+cmake:
+  - 3.21.0
+cuda:
+  - None
+  - 10.2  # [linux64]
+  - 11.3  # [linux64]
+cuda_home:
+  - None
+  - /usr/local/cuda-10.2  # [linux64]
+  - /usr/local/cuda-11.3  # [linux64]
+cuda_host_compiler:
+  - None
+  - gxx_linux-64 8.5  # [linux64]
+  - gxx_linux-64 9.4  # [linux64]
+cudnn:
+  - None
+  - 7.6.5  # [linux64]
+  - 8.2.0  # [linux64]
+ninja:
+  - 1.10.2
+pip:
+  - 22.0.3
+python:
+  - 3.7
+  - 3.8
+  - 3.9
+pytorch:
+  # If not explicitly specified, we use the latest version that is greater than
+  # or equal to v1.11 from the available Conda channels.
+  - ~= 1.11
+pytorch_variant:
+  - cpu
+  - cuda  # [linux64]
+  - cuda  # [linux64]
+setuptools:
+  - 60.9.3
+wheel:
+  - 0.37.1
+
+zip_keys:
+  - cuda
+  - cuda_home
+  - cuda_host_compiler
+  - cudnn
+  - pytorch_variant
+
+MACOSX_DEPLOYMENT_TARGET:  # [osx]
+  - 10.14                  # [osx]

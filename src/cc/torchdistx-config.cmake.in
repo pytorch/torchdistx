@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(Torch @Torch_VERSION@)
+
+include(${CMAKE_CURRENT_LIST_DIR}/torchdistx-targets.cmake)
+
+check_required_components(torchdistx)
