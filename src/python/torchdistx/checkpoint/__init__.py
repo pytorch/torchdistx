@@ -9,5 +9,5 @@ from .metadata import (
 )
 from .state_dict_loader import load_state_dict
 from .state_dict_saver import save_state_dict
-from .storage_reader import StorageReader
-from .storage_writer import StorageWriter
+from .storage_reader import (StorageReader, FileSystemReader)
+from .storage_writer import StorageWriter, FileSystemWriter)
