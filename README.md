@@ -144,8 +144,8 @@ This feature allows to perform SPMD checkpointing of state_dict featuring Sharde
 It currently works by having each rank checkpointing their local shards and have rank `0`
 deal with regular tensors, non-tensor items and metadata.
 
-** WARNING ** This feature requires PyTorch master (or future 1.12) for ShardedTensor APIs.
-** WARNING ** This feature depends on experimental PyTorch APIs.
+**WARNING** This feature requires PyTorch master (or future 1.12) for ShardedTensor APIs.
+**WARNING** This feature depends on experimental PyTorch APIs.
 
 ```python
 import torch
