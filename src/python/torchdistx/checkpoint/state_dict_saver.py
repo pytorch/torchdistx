@@ -226,17 +226,17 @@ def save_state_dict(
         optim_state_dict = optimizer.state_dict()
 
         ...
-        # torch.distributed does not assume the the correctness of the state_dict
+        # torchdistx.checkpoint does not assume the the correctness of the state_dict
         # the caller needs to ensure the correctness of the state_dict
         optim_state_dict = some_function_to_cleanup_optim_state_dict(optim_state_dict)
         ...
 
-        fs_storage_writer = torch.distributed.FileSystemWriter("/checkpoint/1")
-        torch.distributed.save_state_dict(
+        fs_storage_writer = torchdistx.checkpoint.FileSystemWriter("/checkpoint/1")
+        torchdistx.checkpoint.save_state_dict(
             state_dict=model_state_dict,
             storage_writer=fs_stroage_writer,
         )
-        torch.distributed.save_state_dict(
+        torchdistx.checkpoint.save_state_dict(
             state_dict=optim_state_dict,
             storage_writer=fs_stroage_writer,
         )

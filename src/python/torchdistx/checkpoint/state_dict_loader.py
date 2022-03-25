@@ -163,17 +163,17 @@ def load_state_dict(
         optim_state_dict = optimizer.state_dict()
         ...
 
-        # torch.distributed does not assume the the correctness of the state_dict
+        # torchdistx.checkpoint does not assume the the correctness of the state_dict
         # the caller needs to ensure the correctness of the state_dict
         optim_state_dict = some_function_to_cleanup_optim_state_dict(optim_state_dict)
         ...
 
-        fs_storage_loader = torch.distributed.FileSystemLoader("/checkpoint/1")
-        torch.distributed.load_state_dict(
+        fs_storage_loader = torchdistx.checkpoint.FileSystemLoader("/checkpoint/1")
+        torchdistx.checkpoint.load_state_dict(
             state_dict=model_state_dict,
             storage_reader=fs_stroage_loader,
         )
-        torch.distributed.load_state_dict(
+        torchdistx.checkpoint.load_state_dict(
             state_dict=optim_state_dict,
             storage_reader=fs_stroage_loader,
         )
