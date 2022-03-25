@@ -152,11 +152,11 @@ class TestStateDictSaveLoadWithSharedTensor(ShardedTensorTestBase):
     def world_size(self) -> int:
         return 2
 
-    @with_comms(init_rpc=True)
+    @with_comms(init_rpc=False)
     @skip_if_lt_x_gpu(2)
     # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
-    def test_read_write_shard_tenosr(self) -> None:
+    def test_read_write_shard_tensor(self) -> None:
         paths = [tempfile.mkdtemp()]
         dist.broadcast_object_list(paths)
 
@@ -217,7 +217,7 @@ class TestReshardOnLoad(ShardedTensorTestBase):
         tensor.gather(out=res)
         return res
 
-    @with_comms(init_rpc=True)
+    @with_comms(init_rpc=False)
     @skip_if_lt_x_gpu(2)
     # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
@@ -328,7 +328,7 @@ class TestReshardOnLoad(ShardedTensorTestBase):
                         torch.allclose(store_tensor, load_tensor), msg=f"{s0} vs {s1}"
                     )
 
-    @with_comms(init_rpc=True)
+    @with_comms(init_rpc=False)
     @skip_if_lt_x_gpu(2)
     # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
