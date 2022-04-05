@@ -1,0 +1,21 @@
+url: "http://pytorch.org/torchdistx"
+name: Torch Distributed Experimental
+latest_version: 1.0
+relative_permalinks: false
+timezone: America/Los_Angeles
+sass:
+    sass_dir: _sass
+    style: compressed
+safe: true
+highlighter: rouge
+markdown: kramdown
+future: true
+include:
+    - _static
+    - _images
+    - _modules
+    - _sources
+exclude:
+    - README.md
+plugins:
+    - jekyll-feed
