@@ -1,6 +1,7 @@
 url: "http://pytorch.org/torchdistx"
 name: Torch Distributed Experimental
 latest_version: 1.0
+baseurl: ""
 relative_permalinks: false
 timezone: America/Los_Angeles
 sass:
