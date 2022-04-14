@@ -22,7 +22,8 @@ torchdistX versions corresponding to each PyTorch release:
 
 | `torch`      | `torchdistx` | `python`         |
 | ------------ | ------------ | ---------------- |
-| `1.11.0`     | `main`       | `>=3.7`, `<=3.9` |
+| `main`       | `main`       | `>=3.7`, `<=3.9` |
+| `1.11.0`     | `0.1.0`      | `>=3.7`, `<=3.9` |
 
 ## Installation
 As of today only Linux and macOS operating systems are supported. Please note
@@ -35,13 +36,37 @@ Conda is the recommended way to install torchdistX. Running the following
 command in a Conda environment will install torchdistX and all its dependencies.
 
 **Stable**
+
+For PyTorch CPU:
 ```
-$ conda install -c pytorch -c conda-forge torchdistx
+$ conda install -c pytorch -c conda-forge torchdistx cpuonly
+```
+
+For PyTorch with CUDA 10.2:
+```
+$ conda install -c pytorch -c conda-forge torchdistx cudatoolkit=10.2
+```
+
+For PyTorch with CUDA 11.3:
+```
+$ conda install -c pytorch -c conda-forge torchdistx cudatoolkit=11.3
 ```
 
 **Nightly**
+
+For PyTorch CPU
 ```
-$ conda install -c pytorch-nightly -c conda-forge torchdistx
+$ conda install -c pytorch-nightly -c conda-forge torchdistx cpuonly
+```
+
+For PyTorch with CUDA 10.2
+```
+$ conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=10.2
+```
+
+For PyTorch with CUDA 11.3
+```
+$ conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=11.3
 ```
 
 In fact torchdistX offers several Conda packages that you can install
