@@ -98,6 +98,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.aws_key_id }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.aws_access_key }}
+          AWS_DEFAULT_REGION: us-east-1
         run: |
           for pkg in ~/wheelhouse/*.whl; do
               aws s3 cp "$pkg" "s3://${{ inputs.s3_wheel_path }}/${{ matrix.build_variant }}/" --acl public-read
