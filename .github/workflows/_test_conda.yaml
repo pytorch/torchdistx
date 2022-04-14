@@ -26,8 +26,6 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
-      - name: Temporary workaround for https://github.com/actions/checkout/issues/760
-        run: git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Check-out the repository
         uses: actions/checkout@v3
         with:

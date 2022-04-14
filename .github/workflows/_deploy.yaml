@@ -39,8 +39,6 @@ jobs:
         with:
           name: docs
           path: ~/docs
-      - name: Temporary workaround for https://github.com/actions/checkout/issues/760
-        run: git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Check-out the gh-pages branch of the repository
         uses: actions/checkout@v3
         with:
