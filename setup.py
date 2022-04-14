@@ -137,7 +137,7 @@ class install_cmake(Command):
 
 
 def get_version() -> str:
-    version = "0.1.0"
+    version = "0.2.0.dev0"
 
     if torch.version.cuda is None:
         return f"{version}+cpu"
