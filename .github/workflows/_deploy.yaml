@@ -78,7 +78,7 @@ jobs:
       - name: Upload the Conda packages to Anaconda
         run: |
           find ~/conda-build -name '*.tar.bz2' -type f\
-            -exec anaconda --token ${{ secrets.anaconda_token }} upload '{}' \+
+            -exec anaconda --token ${{ secrets.anaconda_token }} upload --force '{}' \+
 
   deploy_wheel:
     name: Deploy the Wheel package
@@ -99,6 +99,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.aws_key_id }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.aws_access_key }}
         run: |
-          for pkg in ~/wheelhouse/*whl; do
-              aws s3 cp "$pkg" s3://${{ inputs.s3_wheel_path }}/${{ matrix.build_variant }}/ --acl public-read
+          for pkg in ~/wheelhouse/*.whl; do
+              aws s3 cp "$pkg" "s3://${{ inputs.s3_wheel_path }}/${{ matrix.build_variant }}/" --acl public-read
           done
