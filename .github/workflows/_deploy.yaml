@@ -43,14 +43,18 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: gh-pages
+      - name: Set up Git
+        run: |
+          # See https://github.com/actions/checkout/issues/766.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
       - name: Commit and push the documentation
         env:
           DOC_FOLDER_OVERRIDE: ${{ inputs.doc_folder_override }}
         run: |
           rsync --recursive --delete-after ~/docs/ ${DOC_FOLDER_OVERRIDE:-$(cat ~/docs/VERSION)}
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
 
           git add --all
 

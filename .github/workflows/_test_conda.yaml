@@ -37,7 +37,8 @@ jobs:
           path: ~/conda-build
       - name: Set up the Conda environment
         run: |
-          conda create --name test\
+          conda create --yes\
+                       --name test\
                        --channel ~/conda-build\
                        --channel pytorch\
                        --channel conda-forge\
