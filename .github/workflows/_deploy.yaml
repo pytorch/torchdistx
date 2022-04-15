@@ -71,6 +71,7 @@ jobs:
       image: ghcr.io/pytorch/torchdistx-ci-conda:1-cpu
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
+      max-parallel: 1
     steps:
       - name: Download the Conda build output from staging
         uses: actions/download-artifact@v3
@@ -90,6 +91,7 @@ jobs:
       image: ghcr.io/pytorch/torchdistx-ci-wheel:1-cpu
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
+      max-parallel: 1
     steps:
       - name: Download the Wheel package from staging
         uses: actions/download-artifact@v3
