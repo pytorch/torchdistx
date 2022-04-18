@@ -4,21 +4,15 @@ from typing import Any, Callable, Dict, List, Tuple
 import torch
 import torch.distributed as dist
 from torch import Tensor
-from torch.distributed._shard.sharded_tensor import (
-    ShardedTensor,
-    ShardedTensorMetadata,
-    TensorProperties,
-    ShardMetadata,
-)
+from torch.distributed._shard.sharded_tensor import (ShardedTensor,
+                                                     ShardedTensorMetadata,
+                                                     ShardMetadata,
+                                                     TensorProperties)
 
-from .metadata import (
-    Metadata,
-    BytesWriteRequest,
-    ExtendedTensorMetadata,
-    StorageMetadata,
-    TensorWriteRequest,
-)
+from .metadata import (BytesWriteRequest, ExtendedTensorMetadata, Metadata,
+                       StorageMetadata, TensorWriteRequest)
 from .storage_writer import StorageWriter
+
 
 # -------------- private functions --------------
 def _compute_tensor_md(fqn: str, tensor: Tensor, metadata: Metadata) -> None:

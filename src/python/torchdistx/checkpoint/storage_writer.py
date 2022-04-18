@@ -8,7 +8,7 @@ import torch
 import torch.distributed as dist
 from torch.futures import Future
 
-from .metadata import Metadata, BytesWriteRequest, TensorWriteRequest
+from .metadata import BytesWriteRequest, Metadata, TensorWriteRequest
 
 
 class StorageWriter(abc.ABC):

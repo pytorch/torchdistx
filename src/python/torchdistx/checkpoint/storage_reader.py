@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 from torch.futures import Future
 
-from .metadata import Metadata, BytesReadRequest, TensorReadRequest
+from .metadata import BytesReadRequest, Metadata, TensorReadRequest
 
 
 class StorageReader(abc.ABC):

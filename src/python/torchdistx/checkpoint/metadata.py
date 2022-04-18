@@ -1,14 +1,12 @@
 import io
 import pickle
 from dataclasses import dataclass
-from typing import Dict, List, Union, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from torch.distributed._shard.sharded_tensor import (
-    ShardedTensor,
-    ShardedTensorMetadata,
-    ShardMetadata,
-)
+from torch.distributed._shard.sharded_tensor import (ShardedTensor,
+                                                     ShardedTensorMetadata,
+                                                     ShardMetadata)
 
 TENSOR_TYPE = Union[torch.Tensor, ShardedTensor]
 
