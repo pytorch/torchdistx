@@ -4,8 +4,9 @@ from typing import Any, Dict, List, Tuple
 import torch
 from torch.distributed._shard.sharded_tensor import ShardedTensor
 from torch.distributed._shard.sharding_spec import ShardMetadata
-from torch.distributed._shard.sharding_spec._internals import \
-    _check_shard_metadata_pair_overlap
+from torch.distributed._shard.sharding_spec._internals import (
+    _check_shard_metadata_pair_overlap,
+)
 
 from .metadata import BytesReadRequest, Metadata, TensorReadRequest
 from .storage_reader import StorageReader
