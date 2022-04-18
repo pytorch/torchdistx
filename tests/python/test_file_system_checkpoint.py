@@ -1,7 +1,8 @@
 import os
 import shutil
 import tempfile
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
+from torch import Tensor
 
 import torch
 import torch.distributed as dist
@@ -215,7 +216,7 @@ class TestReshardOnLoad(ShardedTensorTestBase):
     def load_tensor(self, tensor: ShardedTensor) -> torch.Tensor:
         res = torch.zeros(tensor.shape, device="cpu") if dist.get_rank() == 0 else None
         tensor.gather(out=res)
-        return res
+        return cast(Tensor, res)
 
     @with_comms(init_rpc=True)
     @skip_if_lt_x_gpu(2)
