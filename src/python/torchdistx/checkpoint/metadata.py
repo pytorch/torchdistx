@@ -51,8 +51,8 @@ class ExtendedTensorMetadata:
 @dataclass
 class Metadata:
     # Metadata for the state dict.
-    # TODO, use pickle for this quick hack, must replace it with something else e.g. flatbuffer
-    # before serious use case,
+    # TODO, use pickle for this quick hack, must replace it with something
+    # else e.g. flatbuffer before serious use case,
     state_dict_metadata: Dict[str, ExtendedTensorMetadata]
 
     def __getstate__(self) -> bytes:
@@ -85,6 +85,6 @@ class TensorWriteRequest:
 class TensorReadRequest:
     tensor: torch.Tensor
     storage_key: str
-    # offset and length to read/write w.r.t. to the storage identified by ``storage_key``
+    # offset and length w.r.t. to the storage identified by ``storage_key``
     offsets: Tuple[int, ...]
     lengths: Tuple[int, ...]

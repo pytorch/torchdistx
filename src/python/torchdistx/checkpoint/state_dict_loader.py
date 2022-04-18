@@ -1,5 +1,5 @@
 import io
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 from torch.distributed._shard.sharded_tensor import ShardedTensor
@@ -57,7 +57,8 @@ def _reshard_and_prepare_read_request(
     state_dict: Dict[str, Any], metadata_from_storage: Metadata
 ) -> Tuple[List[BytesReadRequest], List[TensorReadRequest]]:
     """
-    Use the loaded metadata and the current state dict to map the saved tensors to current tensors
+    Use the loaded metadata and the current state dict to map the saved tensors
+      to current tensors.
 
     NOTE:
     During the save,
@@ -67,7 +68,6 @@ def _reshard_and_prepare_read_request(
     for fqn, obj in state_dict.items():
         if isinstance(obj, torch.Tensor):
             tensor = obj.detach()
-            storage_size = tensor.nelement() * tensor.element_size()
 
             rr = TensorReadRequest(
                 tensor=tensor,
@@ -80,18 +80,21 @@ def _reshard_and_prepare_read_request(
         elif isinstance(obj, ShardedTensor):
             md = metadata_from_storage.state_dict_metadata[fqn]
 
-            # this is a naive quadratic algo that can later be optimized by sorting metadata and the shards md
-            # FIXME what sort of error handling should we do? Overlapping storage items? Missing data?
+            # this is a naive quadratic algo that can later be optimized by
+            #   sorting metadata and the shards md
+            # FIXME what sort of error handling should we do? Overlapping
+            #   storage items? Missing data?
             for shard in obj.local_shards():
                 # scan all mds looking for chunks
                 for storage_md in md.storage_metadata:
                     shard_md_from_storage = storage_md.shard_metadata
                     tensor = shard.tensor.detach()
                     assert shard_md_from_storage is not None
-                    # FIXME what does it mean for offset > 0? just add it to read request offset?
+                    # FIXME what does it mean for offset > 0? just add it
+                    #   to read request offset?
                     assert (
                         storage_md.offset == 0
-                    ), "Storage at key {fqn} is saved with an offset, we cannot load this yet"
+                    ), "Cannot load Storage '{fqn}': offset is non-zero"
 
                     # do they overlap?
                     if not _check_shard_metadata_pair_overlap(

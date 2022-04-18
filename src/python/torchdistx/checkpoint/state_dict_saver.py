@@ -1,5 +1,5 @@
 import io
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.distributed as dist
@@ -172,8 +172,8 @@ def _prepare(
 
     for fqn, obj in state_dict.items():
         if isinstance(obj, Tensor):
-            # The assumption is that non ShardedTensors are full replicated across all ranks
-            # So we just need one from Rank 0.
+            # The assumption is that non ShardedTensors are full replicated across
+            # all ranks so we just need one from Rank 0.
             # If that's not the case, we will update later.
             if dist.is_initialized() and dist.get_rank() != 0:
                 pass
@@ -206,9 +206,11 @@ def save_state_dict(
 ) -> None:
     """
     This public function defined the default behavior to save a state_dict
-    Notes
-    1. This is a WIP, the state_dict save with different versions of the code might not be compatible.
-    2. The caller needs to ensure the correctness of the state_dict
+
+    NB:
+    1. The saved format still a prototype.
+    2. We don't guarantee backward compatibility yet.
+    3. The caller needs to ensure the correctness of the state_dict.
 
     Sample Code
     ```
@@ -239,7 +241,7 @@ def save_state_dict(
 
     Args:
         state_dict (Dict[str, Any]) : A state_dict
-        storage_writer (StorageWriter): An instance of storage writer that performance the writes.
+        storage_writer (StorageWriter): A StorageWriter that performs the writes.
     """
     (
         metadata,
