@@ -40,7 +40,7 @@ def materialize_tensor(tensor: Tensor) -> Tensor:
     """Materializes ``tensor``.
 
     Args:
-        module:
+        tensor:
             The tensor instance to materialize.
     """
     return _C.materialize_tensor(tensor)
