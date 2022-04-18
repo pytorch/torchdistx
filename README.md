@@ -228,6 +228,29 @@ tensor([[-0.1838, -0.0080,  0.0747, -0.1663, -0.0936,  0.0587,  0.1988, -0.0977,
        ..., requires_grad=True)
 ```
 
+
+### ShardedTensor checkpointing
+This feature allows to perform SPMD checkpointing of state_dict featuring ShardedTensor.
+It currently works by having each rank checkpointing their local shards and have rank `0`
+deal with regular tensors, non-tensor items and metadata.
+
+**WARNING** This feature requires PyTorch master (or future 1.12) for ShardedTensor APIs.
+**WARNING** This feature depends on experimental PyTorch APIs.
+
+```python
+import torch
+from torchdistx.checkpoint as cp
+from torch.distributed._shard.sharded_tensor import state_dict_hook
+
+def worker(rank):
+  model = ...
+  model._register_state_dict_hook(state_dict_hook)
+
+  fs_writer = cp.FileSystemWriter(path="/checkpoint/")
+  cp.save_state_dict(state_dict=model.state_dict(), storage_writer=fs_writer)
+```
+
+
 ## Documentation
 For more documentation, see [our docs website](https://pytorch.org/torchdistx/latest).
 

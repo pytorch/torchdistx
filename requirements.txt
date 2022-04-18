@@ -3,3 +3,4 @@ setuptools==60.9.3
 torch==1.11.0
 types-setuptools==57.4.9
 wheel==0.37.1
+expecttest==0.1.3
