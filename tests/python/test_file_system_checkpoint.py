@@ -1,39 +1,26 @@
 import os
 import shutil
 import tempfile
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
 
 import torch
 import torch.distributed as dist
+from torch import Tensor
 from torch.distributed._shard import sharded_tensor
-from torch.distributed._shard.sharded_tensor import (
-    state_dict_hook,
-    ShardedTensor,
-)
-
-from torch.distributed._shard.sharding_spec import (
-    ShardMetadata,
-    ChunkShardingSpec,
-    EnumerableShardingSpec,
-    ShardingSpec,
-)
-from torch.testing._internal.common_distributed import (
-    requires_nccl,
-    skip_if_lt_x_gpu,
-)
-from torch.testing._internal.common_utils import (
-    TestCase,
-)
+from torch.distributed._shard.sharded_tensor import (ShardedTensor,
+                                                     state_dict_hook)
+from torch.distributed._shard.sharding_spec import (ChunkShardingSpec,
+                                                    EnumerableShardingSpec,
+                                                    ShardingSpec,
+                                                    ShardMetadata)
+from torch.testing._internal.common_distributed import (requires_nccl,
+                                                        skip_if_lt_x_gpu)
+from torch.testing._internal.common_utils import TestCase
 from torch.testing._internal.distributed._shard.sharded_tensor import (
-    ShardedTensorTestBase,
-    with_comms,
-)
-from torchdistx.checkpoint import (
-    load_state_dict,
-    save_state_dict,
-    FileSystemReader,
-    FileSystemWriter,
-)
+    ShardedTensorTestBase, with_comms)
+
+from torchdistx.checkpoint import (FileSystemReader, FileSystemWriter,
+                                   load_state_dict, save_state_dict)
 
 
 def assert_state_dict_equal(
@@ -215,7 +202,7 @@ class TestReshardOnLoad(ShardedTensorTestBase):
     def load_tensor(self, tensor: ShardedTensor) -> torch.Tensor:
         res = torch.zeros(tensor.shape, device="cpu") if dist.get_rank() == 0 else None
         tensor.gather(out=res)
-        return res
+        return cast(Tensor, res)
 
     @with_comms(init_rpc=True)
     @skip_if_lt_x_gpu(2)

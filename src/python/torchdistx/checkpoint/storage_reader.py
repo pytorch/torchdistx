@@ -2,12 +2,13 @@ import abc
 import operator
 import os
 import pickle
-from typing import List
+from typing import List, Optional, cast
 
 import torch
+from torch import Tensor
 from torch.futures import Future
 
-from .metadata import Metadata, BytesReadRequest, TensorReadRequest
+from .metadata import BytesReadRequest, Metadata, TensorReadRequest
 
 
 class StorageReader(abc.ABC):
@@ -54,21 +55,21 @@ class FileSystemReader(StorageReader):
         requests.sort(key=operator.attrgetter("storage_key"))
 
         cached_storage_key = None
-        view_cached = None
+        view_cached: Optional[Tensor] = None
 
         for req in requests:
             if cached_storage_key != req.storage_key:
                 with open(os.path.join(self.path, req.storage_key), "rb") as storage:
-                    view_cached = torch.load(storage)
+                    view_cached = cast(Tensor, torch.load(storage))
                     cached_storage_key = req.storage_key
 
-            view_to_copy = view_cached
+            view_to_copy: Tensor = cast(Tensor, view_cached)
             # FileSystemWrite writes the tensor as is during save.
             # During load time, we will load the Tensor (with it orignal view)
             # narrow it along all dimemsions, and copy_ it to the
             # target tensor, which will be the same size.
             for dim, (start, length) in enumerate(zip(req.offsets, req.lengths)):
-                view_to_copy = torch.narrow(view_to_copy, dim, start, length)
+                view_to_copy = cast(Tensor, torch.narrow(view_to_copy, dim, start, length))
 
             assert (
                 view_to_copy.size() == req.tensor.size()
@@ -76,7 +77,7 @@ class FileSystemReader(StorageReader):
 
             req.tensor.copy_(view_to_copy)
 
-        fut = Future()
+        fut: Future = Future()
         fut.set_result(None)
         return fut
 
@@ -85,7 +86,7 @@ class FileSystemReader(StorageReader):
             with open(os.path.join(self.path, req.storage_key), "rb") as storage:
                 req.bytes.write(storage.read())
 
-        fut = Future()
+        fut: Future = Future()
         fut.set_result(None)
         return fut
 
