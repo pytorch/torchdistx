@@ -24,7 +24,7 @@ python:
   - 3.8
   - 3.9
 pytorch:
-  - 1.11
+  -
 pytorch_variant:
   - cpu
 sanitizers:

@@ -21,9 +21,11 @@
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
 #include <c10/core/DispatchKeySet.h>
+#include <c10/core/SafePyObject.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/core/TensorOptions.h>
 #include <c10/core/impl/LocalDispatchKeySet.h>
+#include <c10/core/impl/PyInterpreter.h>
 #include <c10/util/Optional.h>
 #include <c10/util/intrusive_ptr.h>
 #include <c10/util/python_stub.h>
@@ -34,6 +36,7 @@
 namespace torchdistx {
 
 using at::Argument;
+using at::BackendComponent;
 using at::Device;
 using at::DispatchKey;
 using at::DispatchKeySet;
@@ -44,12 +47,12 @@ using at::IValue;
 using at::nullopt;
 using at::OperatorHandle;
 using at::optional;
+using at::SafePyObject;
 using at::ScalarType;
 using at::Storage;
 using at::Tensor;
 using at::TensorBase;
 using at::TensorImpl;
-using at::TorchDispatchTypeObject;
 using at::typeMetaToScalarType;
 using at::VariableVersion;
 
@@ -82,7 +85,7 @@ class FakePyInterpreter {
   }
 
   [[noreturn]] static void dispatch(const PyInterpreter*, const OperatorHandle&, Stack*,
-                                    const std::shared_ptr<TorchDispatchTypeObject>&) {
+                                    const std::shared_ptr<SafePyObject>&) {
     failCall("dispatch");
   }
 
@@ -188,18 +191,20 @@ DispatchKeySet FakeTensorImpl::computeFakeKeySet(TensorImpl& meta_impl, Device f
 
   // We use the data type and layout of `meta_impl`, but use `fake_device`
   // instead of the meta device to compute the backend dispatch key.
-  DispatchKey backend_key = computeDispatchKey(data_type, meta_impl.layout(), fake_device);
+  DispatchKey runtime_backend_key = computeDispatchKey(data_type, meta_impl.layout(), fake_device);
 
   // We also mix the `Fake` dispatch key to ensure that the Fake handler gets
   // called instead of the actual backend handler.
-  DispatchKeySet key_set{backend_key, kFakeDispatchKey};
+  DispatchKeySet key_set{runtime_backend_key, kFakeDispatchKey};
 
   if (meta_impl.is_inference()) {
     return key_set;
   }
 
-  key_set = key_set | getAutocastRelatedKeySetFromBackend(backend_key);
-  key_set = key_set | getAutogradRelatedKeySetFromBackend(backend_key);
+  BackendComponent backend_component = key_set.highestBackendKey();
+
+  key_set = key_set | getAutocastRelatedKeySetFromBackend(backend_component);
+  key_set = key_set | getAutogradRelatedKeySetFromBackend(backend_component);
 
   return key_set;
 }
@@ -550,11 +555,11 @@ void FakeHandler::convertDeviceArgumentToMeta() noexcept {
 }
 
 void FakeHandler::redispatchToMeta() {
-  auto backend_key = (key_set_ & kAfterFakeKeySet_).highestPriorityBackendTypeId();
+  auto next_key = (key_set_ & kAfterFakeKeySet_).highestPriorityTypeId();
 
-  if (backend_key != DispatchKey::Undefined) {
-    TORCH_CHECK_NOT_IMPLEMENTED(hasKernelForDispatchKey(backend_key),
-        "The dispatch key `", backend_key, "` has no kernel for `", handle_->schema().name(), "`.");
+  if (next_key != DispatchKey::Undefined) {
+    TORCH_CHECK_NOT_IMPLEMENTED(hasKernelForDispatchKey(next_key),
+        "The dispatch key `", next_key, "` has no kernel for `", handle_->schema().name(), "`.");
   }
 
   TORCH_CHECK_NOT_IMPLEMENTED(hasKernelForDispatchKey(DispatchKey::Meta),
