@@ -69,7 +69,9 @@ class FileSystemReader(StorageReader):
             # narrow it along all dimemsions, and copy_ it to the
             # target tensor, which will be the same size.
             for dim, (start, length) in enumerate(zip(req.offsets, req.lengths)):
-                view_to_copy = cast(Tensor, torch.narrow(view_to_copy, dim, start, length))
+                view_to_copy = cast(
+                    Tensor, torch.narrow(view_to_copy, dim, start, length)
+                )
 
             assert (
                 view_to_copy.size() == req.tensor.size()
