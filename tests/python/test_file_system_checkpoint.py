@@ -7,20 +7,26 @@ import torch
 import torch.distributed as dist
 from torch import Tensor
 from torch.distributed._shard import sharded_tensor
-from torch.distributed._shard.sharded_tensor import (ShardedTensor,
-                                                     state_dict_hook)
-from torch.distributed._shard.sharding_spec import (ChunkShardingSpec,
-                                                    EnumerableShardingSpec,
-                                                    ShardingSpec,
-                                                    ShardMetadata)
-from torch.testing._internal.common_distributed import (requires_nccl,
-                                                        skip_if_lt_x_gpu)
+from torch.distributed._shard.sharded_tensor import ShardedTensor, state_dict_hook
+from torch.distributed._shard.sharding_spec import (
+    ChunkShardingSpec,
+    EnumerableShardingSpec,
+    ShardingSpec,
+    ShardMetadata,
+)
+from torch.testing._internal.common_distributed import requires_nccl, skip_if_lt_x_gpu
 from torch.testing._internal.common_utils import TestCase
 from torch.testing._internal.distributed._shard.sharded_tensor import (
-    ShardedTensorTestBase, with_comms)
+    ShardedTensorTestBase,
+    with_comms,
+)
 
-from torchdistx.checkpoint import (FileSystemReader, FileSystemWriter,
-                                   load_state_dict, save_state_dict)
+from torchdistx.checkpoint import (
+    FileSystemReader,
+    FileSystemWriter,
+    load_state_dict,
+    save_state_dict,
+)
 
 
 def assert_state_dict_equal(
@@ -63,7 +69,8 @@ class MyTestModule(torch.nn.Module):
         self.emb = torch.nn.EmbeddingBag(5, 10)
 
 
-# The ShardedModels are borrowed from test/distributed/_sharded_tensor/test_sharded_tensor.py
+# The ShardedModels are borrowed from
+# test/distributed/_sharded_tensor/test_sharded_tensor.py
 class MyShardedModel3(torch.nn.Module):
     def __init__(
         self,
@@ -81,7 +88,6 @@ class MyShardedModel2(torch.nn.Module):
     def __init__(
         self,
         spec: Optional[ShardingSpec] = None,
-        # pyre-fixme [11]: Annotation `dist.ProcessGroup` is not defined as a type.
         group: Optional[dist.ProcessGroup] = None,
     ) -> None:
         super(MyShardedModel2, self).__init__()
@@ -141,7 +147,6 @@ class TestStateDictSaveLoadWithSharedTensor(ShardedTensorTestBase):
 
     @with_comms(init_rpc=True)
     @skip_if_lt_x_gpu(2)
-    # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
     def test_read_write_shard_tenosr(self) -> None:
         paths = [tempfile.mkdtemp()]
@@ -149,7 +154,6 @@ class TestStateDictSaveLoadWithSharedTensor(ShardedTensorTestBase):
 
         path = paths[0]
 
-        # pyre-fixme [28]: Unexpected keyword argument `dim` to call `dist._sharding_spec.api.ChunkShardingSpec.__init__`.
         spec = ChunkShardingSpec(
             dim=0,
             placements=[
@@ -172,7 +176,7 @@ class TestStateDictSaveLoadWithSharedTensor(ShardedTensorTestBase):
         # Create a new model
         model_to_load = MyShardedModel1(spec)
         # This is not the correct hook for loading the state dict
-        # model_to_load._register_load_state_dict_pre_hook(pre_load_state_dict_hook, True)
+        # model_to_load._register_load_state_dict_pre_hook(pre_load_state_dict_hook, True)  # noqa: E501
         model_to_load._register_state_dict_hook(state_dict_hook)
         state_dict_to_load_to = model_to_load.state_dict()
 
@@ -206,13 +210,11 @@ class TestReshardOnLoad(ShardedTensorTestBase):
 
     @with_comms(init_rpc=True)
     @skip_if_lt_x_gpu(2)
-    # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
     def test_load_with_different_shard_plan(self) -> None:
         path = self.get_file_path()
 
         specs = [
-            # pyre-fixme [28]: Unexpected keyword argument `dim` to call `dist._sharding_spec.api.ChunkShardingSpec.__init__`.
             ChunkShardingSpec(
                 dim=0,
                 placements=[
@@ -220,7 +222,6 @@ class TestReshardOnLoad(ShardedTensorTestBase):
                     "rank:1/cuda:1",
                 ],
             ),
-            # pyre-fixme [28]: Unexpected keyword argument `dim` to call `dist._sharding_spec.api.ChunkShardingSpec.__init__`.
             ChunkShardingSpec(
                 dim=0,
                 placements=[
@@ -317,12 +318,10 @@ class TestReshardOnLoad(ShardedTensorTestBase):
 
     @with_comms(init_rpc=True)
     @skip_if_lt_x_gpu(2)
-    # pyre-fixme [56]: Pyre was not able to infer the type of the decorator `torch.testing._internal.common_distributed.requires_nccl()`
     @requires_nccl()
     def test_load_rowwise_to_colwise(self) -> None:
         path = self.get_file_path()
 
-        # pyre-fixme [28]: Unexpected keyword argument `dim` to call `dist._sharding_spec.api.ChunkShardingSpec.__init__`.
         src_spec = ChunkShardingSpec(
             dim=0,
             placements=[
@@ -331,7 +330,6 @@ class TestReshardOnLoad(ShardedTensorTestBase):
             ],
         )
 
-        # pyre-fixme [28]: Unexpected keyword argument `dim` to call `dist._sharding_spec.api.ChunkShardingSpec.__init__`.
         dst_spec = ChunkShardingSpec(
             dim=1,
             placements=[
