@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Callable, Dict, Optional
-from contextlib import contextmanager
 
 from torch import Tensor
 from torch.nn import Module
@@ -13,14 +12,6 @@ from torch.nn import Module
 # We import `fake` to monkey-patch `repr()` of `Tensor`.
 from . import fake  # noqa: F401
 from . import _C
-
-@contextmanager
-def symbolic_trace():
-    _C.enable_deferred_init(True)
-    try:
-        yield
-    finally:
-        _C.enable_deferred_init(False)
 
 
 def deferred_init(module_fn: Callable[..., Module], *args, **kwargs) -> Module:
