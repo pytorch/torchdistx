@@ -118,8 +118,8 @@ class OpOutputDescriptor {
 };
 
 // Each fake tensor constructed in a deferred-init context has its individual
-// instance of `DeferredInitContext` stored inside the tensor itself.
-class DeferredInitContext {
+// instance of `TensorRecord` stored along with the tensor.
+class TensorRecord {
  public:
   bool valid() const noexcept {
     return opt_output_desc_.has_value();
@@ -133,7 +133,7 @@ class DeferredInitContext {
     opt_output_desc_ = std::move(output_desc);
   }
 
-  // Forces the `DeferredInitContext` of `view` to be kept alive even if `view`
+  // Forces the record instance of `view` to be kept alive even if `view` goes
   // goes out of scope. This is necessary when `view` is a view of the current
   // tensor and has an in-place operation. In such case we have to ensure that
   // we don't delete recorded operations that are only referenced by `view`.
@@ -142,21 +142,21 @@ class DeferredInitContext {
   void dispose() noexcept {
     opt_output_desc_.reset();
 
-    views_.clear();
+    view_records_.clear();
   }
 
  private:
   optional<OpOutputDescriptor> opt_output_desc_{};
-  std::vector<std::shared_ptr<DeferredInitContext>> views_{};
+  std::vector<std::shared_ptr<TensorRecord>> view_records_{};
 };
 
-void DeferredInitContext::keepAlive(const Tensor& view) {
-  auto ctx = unsafeAsFake(view).getData<DeferredInitContext>(kDeferredInitDispatchKey);
+void TensorRecord::keepAlive(const Tensor& view) {
+  auto record = unsafeAsFake(view).getData<TensorRecord>(kDeferredInitDispatchKey);
 
-  TORCH_INTERNAL_ASSERT(ctx,
+  TORCH_INTERNAL_ASSERT(record,
       "The tensor has no recorded deferred-init operation.");
 
-  views_.emplace_back(std::move(ctx));
+  view_records_.emplace_back(std::move(record));
 }
 
 // An operation recorded in a deferred-init context.
@@ -296,13 +296,13 @@ const Tensor& Op::getOutput(std::size_t idx) const noexcept {
   return *opt_out;
 }
 
-inline DeferredInitContext& getDeferredInitContext(const Tensor& fake) {
-  auto* ctx = unsafeAsFake(fake).unsafeGetData<DeferredInitContext>(kDeferredInitDispatchKey);
+inline TensorRecord& getTensorRecord(const Tensor& fake) {
+  auto* record = unsafeAsFake(fake).unsafeGetData<TensorRecord>(kDeferredInitDispatchKey);
 
-  TORCH_INTERNAL_ASSERT(ctx != nullptr,
+  TORCH_INTERNAL_ASSERT(record != nullptr,
       "The tensor has no recorded deferred-init operation.");
 
-  return *ctx;
+  return *record;
 }
 
 // A node in the operation graph holding a recorded operation.
@@ -448,7 +448,7 @@ void OpNode::ensureViewsKeptAlive(const Stack& outputs, const Tensor& fake_argum
         // operation node of the output stays alive even after all references to
         // the output get released. Otherwise we can't correctly materialize the
         // node of the argument.
-        getDeferredInitContext(fake_argument).keepAlive(output);
+        getTensorRecord(fake_argument).keepAlive(output);
       }
     }
     return false;
@@ -462,9 +462,9 @@ void OpNode::attachDependencies() {
     // If `argument` was constructed in the deferred-init context, add its node
     // to the dependencies.
     if (isFake(argument)) {
-      DeferredInitContext& ctx = getDeferredInitContext(argument);
+      TensorRecord& record = getTensorRecord(argument);
 
-      const OpOutputDescriptor& dependency = ctx.output_descriptor();
+      const OpOutputDescriptor& dependency = record.output_descriptor();
 
       dependencies_.emplace_back(dependency);
 
@@ -681,7 +681,7 @@ void recordOp(Op&& op, Stack& outputs) {
     if (isFake(tensor)) {
       OpOutputDescriptor output_desc{node, idx};
 
-      getDeferredInitContext(tensor).set_output_descriptor(std::move(output_desc));
+      getTensorRecord(tensor).set_output_descriptor(std::move(output_desc));
     }
 
     idx++;
@@ -696,7 +696,7 @@ void ensureContextsInitialized(const Op& op, Stack& outputs) {
   auto fn = [](Tensor& tensor) {
     if (isFake(tensor)) {
       if (FakeTensor fake = unsafeAsFake(tensor); !fake.hasData(kDeferredInitDispatchKey)) {
-        fake.setData(kDeferredInitDispatchKey, std::make_shared<DeferredInitContext>());
+        fake.setData(kDeferredInitDispatchKey, std::make_shared<TensorRecord>());
       }
     }
 
@@ -707,12 +707,12 @@ void ensureContextsInitialized(const Op& op, Stack& outputs) {
 }
 
 Tensor materialize(const Tensor& fake, bool retain_context = false) {
-  DeferredInitContext& ctx = getDeferredInitContext(fake);
+  TensorRecord& record = getTensorRecord(fake);
 
-  TORCH_CHECK_VALUE(ctx.valid(),
+  TORCH_CHECK_VALUE(record.valid(),
       "The tensor has already been materialized.");
 
-  const OpOutputDescriptor& output_desc = ctx.output_descriptor();
+  const OpOutputDescriptor& output_desc = record.output_descriptor();
 
   output_desc.node()->materialize();
 
@@ -727,7 +727,7 @@ Tensor materialize(const Tensor& fake, bool retain_context = false) {
   // If true, we do not delete our reference to the context object. This means
   // we can call this function again to get the materialized tensor.
   if (!retain_context) {
-    ctx.dispose();
+    record.dispose();
   }
 
   return out;
