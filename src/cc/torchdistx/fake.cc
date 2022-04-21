@@ -120,6 +120,8 @@ class FakePyInterpreter {
   PyInterpreter impl_;
 };
 
+}  // namespace
+
 // A fake tensor acts very much like an opaque tensor (i.e. `OpaqueTensorImpl`)
 // to the dispatch keys above `Fake`. This means it has no storage allocated to
 // it, but still resides on a real device. However, unlike an opaque tensor, it
@@ -133,6 +135,7 @@ class FakeTensorImpl : public TensorImpl {
   // actual factory function for fake tensors.
   explicit FakeTensorImpl() noexcept : TensorImpl{DispatchKeySet{}, caffe2::TypeMeta{}, nullopt} {}
 
+ private:
   static DispatchKeySet computeFakeKeySet(TensorImpl& meta_impl, Device fake_device);
 
   void shallowCopyFromMeta(const TensorImpl& meta_impl, Device fake_device,
@@ -175,7 +178,7 @@ class FakeTensorImpl : public TensorImpl {
   // Each dispatch handler can have its own contextual data associated with a
   // fake tensor. For example the `DeferredInit` handler stores the operation
   // graph node that output the fake tensor in this map.
-  std::unordered_map<DispatchKey, std::shared_ptr<void>> dispatch_context{};
+  std::unordered_map<DispatchKey, std::shared_ptr<void>> dispatch_data{};
 
  private:
   // Assigns `meta_impl` as the meta tensor of this instance.
@@ -329,7 +332,7 @@ void FakeTensorImpl::release_resources() {
 
   meta_impl_ = {};
 
-  dispatch_context.clear();
+  dispatch_data.clear();
 }
 
 void FakeTensorImpl::setMeta(intrusive_ptr<TensorImpl>&& impl) {
@@ -342,6 +345,8 @@ void FakeTensorImpl::setMeta(intrusive_ptr<TensorImpl>&& impl) {
 
   meta_impl_ = std::move(impl);
 }
+
+namespace {
 
 // Returns the meta tensor held by `fake`.
 inline Tensor getMetaTensor(const Tensor& fake) noexcept {
@@ -617,20 +622,6 @@ TORCH_LIBRARY_IMPL(_, /*Fake*/ FuncTorchDynamicLayerBackMode, m) {
 }
 
 namespace torchdistx {
-namespace detail {
-namespace {
-
-FakeTensorImpl* getFakeTensorImpl(const TensorBase& tensor) {
-  TORCH_CHECK(isFake(tensor),
-      "`fake` was expected to be a fake tensor.");
-
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-  return static_cast<detail::FakeTensorImpl*>(tensor.unsafeGetTensorImpl());
-}
-
-}  // namespace
-}  // namespace detail
-
 namespace {
 
 thread_local std::size_t tls_fake_mode_level = 0;
@@ -653,42 +644,55 @@ bool isFake(const TensorBase& tensor) noexcept {
   return tensor.key_set().has(detail::kFakeDispatchKey);
 }
 
-const Storage& getFakeMetaStorage(const TensorBase& fake) {
-  return detail::getFakeTensorImpl(fake)->meta_impl()->storage();
+FakeTensor::FakeTensor(const TensorBase& tensor, bool unsafe)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+    : impl_{static_cast<detail::FakeTensorImpl*>(tensor.unsafeGetTensorImpl())} {
+  TORCH_CHECK(unsafe || isFake(tensor),
+      "`tensor` was expected to be a fake tensor.");
 }
 
-void setFakeContext(TensorBase& fake, DispatchKey key, std::shared_ptr<void> ctx) {
-  if (ctx) {
-    detail::getFakeTensorImpl(fake)->dispatch_context.insert_or_assign(key, std::move(ctx));
+const Storage& FakeTensor::meta_storage() const noexcept {
+  return impl_->meta_impl()->storage();
+}
+
+void FakeTensor::setData(DispatchKey key, std::shared_ptr<void> data) {
+  if (data) {
+    impl_->dispatch_data.insert_or_assign(key, std::move(data));
   } else {
-    detail::getFakeTensorImpl(fake)->dispatch_context.erase(key);
+    impl_->dispatch_data.erase(key);
   }
 }
 
-bool hasFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
-
-  return ctx.find(key) != ctx.end();
+bool FakeTensor::hasData(DispatchKey key) const noexcept {
+  return impl_->dispatch_data.find(key) != impl_->dispatch_data.end();
 }
 
-std::shared_ptr<void> getFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
+std::shared_ptr<void> FakeTensor::getData(DispatchKey key) const {
+  auto& data = impl_->dispatch_data;
 
-  if (auto pos = ctx.find(key); pos != ctx.end()) {
+  if (auto pos = data.find(key); pos != data.end()) {
     return pos->second;
   } else {
     return nullptr;
   }
 }
 
-void* unsafeGetFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
+void* FakeTensor::unsafeGetData(DispatchKey key) const {
+  auto& data = impl_->dispatch_data;
 
-  if (auto pos = ctx.find(key); pos != ctx.end()) {
+  if (auto pos = data.find(key); pos != data.end()) {
     return pos->second.get();
   } else {
     return nullptr;
   }
+}
+
+FakeTensor asFake(const at::TensorBase& tensor) {
+  return FakeTensor{tensor};
+}
+
+FakeTensor unsafeAsFake(const at::TensorBase& tensor) noexcept {
+  return FakeTensor{tensor, /*unsafe = */ true};
 }
 
 }  // namespace torchdistx

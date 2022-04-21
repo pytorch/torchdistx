@@ -151,7 +151,7 @@ class DeferredInitContext {
 };
 
 void DeferredInitContext::keepAlive(const Tensor& view) {
-  auto ctx = getFakeContext<DeferredInitContext>(view, kDeferredInitDispatchKey);
+  auto ctx = unsafeAsFake(view).getData<DeferredInitContext>(kDeferredInitDispatchKey);
 
   TORCH_INTERNAL_ASSERT(ctx,
       "The tensor has no recorded deferred-init operation.");
@@ -296,8 +296,8 @@ const Tensor& Op::getOutput(std::size_t idx) const noexcept {
   return *opt_out;
 }
 
-inline DeferredInitContext& getDeferredInitContext(const Tensor& tensor) {
-  auto* ctx = unsafeGetFakeContext<DeferredInitContext>(tensor, kDeferredInitDispatchKey);
+inline DeferredInitContext& getDeferredInitContext(const Tensor& fake) {
+  auto* ctx = unsafeAsFake(fake).unsafeGetData<DeferredInitContext>(kDeferredInitDispatchKey);
 
   TORCH_INTERNAL_ASSERT(ctx != nullptr,
       "The tensor has no recorded deferred-init operation.");
@@ -325,7 +325,7 @@ class OpNode {
 
   void ensureViewsKeptAlive(const Stack& outputs);
 
-  void ensureViewsKeptAlive(const Stack& outputs, const Tensor& argument);
+  void ensureViewsKeptAlive(const Stack& outputs, const Tensor& fake_argument);
 
   void attachDependencies();
 
@@ -415,7 +415,7 @@ void OpNode::recordStorages(const Stack& outputs) {
     // Ignore tensors that are not constructed in a deferred-init context since
     // we don't need to materialize them.
     if (isFake(tensor)) {
-      storages_.emplace_back(getFakeMetaStorage(tensor));
+      storages_.emplace_back(unsafeAsFake(tensor).meta_storage());
     }
 
     return false;
@@ -436,19 +436,19 @@ void OpNode::ensureViewsKeptAlive(const Stack& outputs) {
   op_.processTensorArguments(fn);
 }
 
-void OpNode::ensureViewsKeptAlive(const Stack& outputs, const Tensor& argument) {
-  const Storage& argument_storage = getFakeMetaStorage(argument);
+void OpNode::ensureViewsKeptAlive(const Stack& outputs, const Tensor& fake_argument) {
+  const Storage& fake_argument_storage = unsafeAsFake(fake_argument).meta_storage();
 
-  auto fn = [&argument, &argument_storage](const Tensor& output) {
+  auto fn = [&fake_argument, &fake_argument_storage](const Tensor& output) {
     // Check if the output is a view of the argument meaning they are different
     // tensors but share the same storage.
-    if (isFake(output) && !output.is_same(argument)) {
-      if (getFakeMetaStorage(output).is_alias_of(argument_storage)) {
+    if (isFake(output) && !output.is_same(fake_argument)) {
+      if (unsafeAsFake(output).meta_storage().is_alias_of(fake_argument_storage)) {
         // Since the output is a view of the argument we have to ensure that the
         // operation node of the output stays alive even after all references to
         // the output get released. Otherwise we can't correctly materialize the
         // node of the argument.
-        getDeferredInitContext(argument).keepAlive(output);
+        getDeferredInitContext(fake_argument).keepAlive(output);
       }
     }
     return false;
@@ -694,8 +694,10 @@ void recordOp(Op&& op, Stack& outputs) {
 
 void ensureContextsInitialized(const Op& op, Stack& outputs) {
   auto fn = [](Tensor& tensor) {
-    if (isFake(tensor) && !hasFakeContext(tensor, kDeferredInitDispatchKey)) {
-      setFakeContext(tensor, kDeferredInitDispatchKey, std::make_shared<DeferredInitContext>());
+    if (isFake(tensor)) {
+      if (FakeTensor fake = unsafeAsFake(tensor); !fake.hasData(kDeferredInitDispatchKey)) {
+        fake.setData(kDeferredInitDispatchKey, std::make_shared<DeferredInitContext>());
+      }
     }
 
     return false;
@@ -821,7 +823,7 @@ void DeferredInitHandler::redispatchToBackend() {
 void DeferredInitHandler::validateTensorArguments() const {
   // If a tensor is fake, we expect it to be constructed in a deferred-init context.
   auto fn = [this](const Tensor& tensor) {
-    TORCH_CHECK_VALUE(!isFake(tensor) || hasFakeContext(tensor, kDeferredInitDispatchKey),
+    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(kDeferredInitDispatchKey),
         "`", handle_->schema().name(), "` has a fake `Tensor` argument which was not constructed "
         "in a deferred-init context.");
 
@@ -1061,7 +1063,7 @@ class ProxyVariableHooks : public VariableHooksInterface {
 
  private:
   static void validateTensorArgument(const char* op_name, const TensorBase& tensor) {
-    TORCH_CHECK_VALUE(!isFake(tensor) || hasFakeContext(tensor, kDeferredInitDispatchKey),
+    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(kDeferredInitDispatchKey),
         "`VariableHooks::", op_name, "` has a fake `Tensor` argument which was not constructed in "
         "a deferred-init context.");
   }
@@ -1160,7 +1162,7 @@ void enableDeferredInit(bool value) {
 }
 
 Tensor materializeTensor(const Tensor& tensor) {
-  if (isFake(tensor) && hasFakeContext(tensor, detail::kDeferredInitDispatchKey)) {
+  if (isFake(tensor) && unsafeAsFake(tensor).hasData(detail::kDeferredInitDispatchKey)) {
     return detail::materialize(tensor);
   } else {
     return tensor;
