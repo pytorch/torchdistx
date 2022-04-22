@@ -27,6 +27,7 @@
 #include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/core/TensorOptions.h>
+#include <c10/util/Optional.h>
 #include <torch/library.h>
 
 #include "fake.h"
@@ -39,6 +40,7 @@ using at::DispatchKeySet;
 using at::FunctionSchema;
 using at::irange;
 using at::IValue;
+using at::nullopt;
 using at::OperatorHandle;
 using at::optional;
 using at::Storage;
@@ -204,7 +206,7 @@ class Op {
   std::size_t num_args_;
   std::size_t num_outputs_;
   Stack stack_;
-  ThreadLocalState tls_{};
+  optional<ThreadLocalState> tls_{};
   bool materialized_ = false;
 };
 
@@ -214,6 +216,9 @@ Op::Op(std::string name, OpFn fn, std::size_t num_args, std::size_t num_outputs,
       num_args_{num_args},
       num_outputs_{num_outputs},
       stack_(std::move(s)) {
+  // Capture the local thread state by the time of the operation.
+  tls_ = ThreadLocalState{};
+
   validateStack(stack_);
 }
 
@@ -260,9 +265,15 @@ void Op::materialize() {
     return;
   }
 
-  ThreadLocalStateGuard state_guard{tls_};
+  {
+    ThreadLocalStateGuard state_guard{*tls_};
 
-  fn_(stack_);
+    fn_(stack_);
+  }
+
+  fn_ = nullptr;
+
+  tls_ = nullopt;
 
   materialized_ = true;
 }
@@ -662,13 +673,13 @@ void OpNode::materializeArguments() {
   op_.convertTensorArguments(fn);
 }
 
-void ensureContextsInitialized(const Op& op, Stack& outputs);
+void ensureTensorRecordSet(const Op& op, Stack& outputs);
 
 // Used to maintain the chronological order of operations.
 thread_local std::uint64_t op_nr_ = 0;
 
 void recordOp(Op&& op, Stack& outputs) {
-  ensureContextsInitialized(op, outputs);
+  ensureTensorRecordSet(op, outputs);
 
   auto node = std::make_shared<OpNode>(op_nr_++, std::move(op), outputs);
 
@@ -692,7 +703,7 @@ void recordOp(Op&& op, Stack& outputs) {
   convertTensors(outputs, node->op().num_outputs(), fn);
 }
 
-void ensureContextsInitialized(const Op& op, Stack& outputs) {
+void ensureTensorRecordSet(const Op& op, Stack& outputs) {
   auto fn = [](Tensor& tensor) {
     if (isFake(tensor)) {
       if (FakeTensor fake = unsafeAsFake(tensor); !fake.hasData(kDeferredInitDispatchKey)) {
