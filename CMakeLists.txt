@@ -84,7 +84,7 @@ if(Python3_EXECUTABLE)
     )
 endif()
 
-find_package(Torch 1.11 REQUIRED PATHS ${torch_cmake_prefix_path})
+find_package(Torch REQUIRED PATHS "/fsx/users/rvarm1/rvarm1/repos/pytorch/torch/share/cmake")
 
 # ------------------------------------------------------------
 # Targets

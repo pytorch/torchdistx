@@ -21,12 +21,12 @@ target_compile_features(torchdistx-py
         cxx_std_17
 )
 
-cmake_path(GET
-    #VAR
-        TORCH_LIBRARY
-    PARENT_PATH
-        torch_library_dir
-)
+#cmake_path(GET
+#    #VAR
+#        TORCH_LIBRARY
+#    PARENT_PATH
+#        torch_library_dir
+#)
 
 # libtorch_python is not exported as part of Torch CMake package, so we have to
 # manually find it.
@@ -34,8 +34,10 @@ find_library(TORCH_PYTHON_LIBRARY
     #NAME
         torch_python
     PATHS
-        ${torch_library_dir}
+        "/fsx/users/rvarm1/rvarm1/repos/pytorch/torch/lib/"
 )
+
+message(STATUS " ROHAN ROHAN ROHAN ${TORCH_PYTHON_LIBRARY}")
 
 mark_as_advanced(TORCH_PYTHON_LIBRARY)
 
