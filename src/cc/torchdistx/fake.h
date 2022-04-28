@@ -22,13 +22,6 @@ class TensorBase;
 namespace torchdistx {
 namespace detail {
 
-// Since as of this implementation PyTorch is out of dispatch keys we hijack
-// the dispatch key of functorch. The implication of this workaround is that
-// functorch and fake tensors cannot be used in the same process.
-//
-// TODO: Once the dispatch key limitation is resolved define our own key.
-constexpr auto kFakeDispatchKey = at::DispatchKey::FuncTorchDynamicLayerBackMode;
-
 class FakeTensorImpl;
 
 }  // namespace detail

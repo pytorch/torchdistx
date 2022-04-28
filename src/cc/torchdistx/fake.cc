@@ -198,7 +198,7 @@ DispatchKeySet FakeTensorImpl::computeFakeKeySet(TensorImpl& meta_impl, Device f
 
   // We also mix the `Fake` dispatch key to ensure that the Fake handler gets
   // called instead of the actual backend handler.
-  DispatchKeySet key_set{runtime_backend_key, kFakeDispatchKey};
+  DispatchKeySet key_set{runtime_backend_key, DispatchKey::Fake};
 
   if (meta_impl.is_inference()) {
     return key_set;
@@ -281,7 +281,7 @@ intrusive_ptr<FakeTensorImpl> FakeTensorImpl::tryGetFromMeta(TensorImpl& meta_im
 }
 
 void FakeTensorImpl::shallow_copy_from(const intrusive_ptr<TensorImpl>& impl) {
-  TORCH_CHECK(impl->key_set().has(kFakeDispatchKey),
+  TORCH_CHECK(impl->key_set().has(DispatchKey::Fake),
       "The source tensor was expected to be a fake tensor.");
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
@@ -407,14 +407,14 @@ class FakeHandler {
 };
 
 // NOLINTNEXTLINE(cert-err58-cpp)
-const DispatchKeySet FakeHandler::kAfterFakeKeySet_{DispatchKeySet::FULL_AFTER, kFakeDispatchKey};
+const DispatchKeySet FakeHandler::kAfterFakeKeySet_{DispatchKeySet::FULL_AFTER, DispatchKey::Fake};
 
 inline bool isCPUScalar(const Tensor& tensor) noexcept {
   return tensor.dim() == 0 && tensor.is_cpu();
 }
 
 void FakeHandler::run() {
-  ExcludeDispatchKeyGuard guard{kFakeDispatchKey};
+  ExcludeDispatchKeyGuard guard{DispatchKey::Fake};
 
   assessOp();
 
@@ -617,7 +617,7 @@ void runFakeHandler(const OperatorHandle& op, DispatchKeySet key_set, Stack* s) 
 }  // namespace torchdistx::detail
 
 // NOLINTNEXTLINE(cert-err58-cpp, clang-diagnostic-reserved-identifier)
-TORCH_LIBRARY_IMPL(_, /*Fake*/ FuncTorchDynamicLayerBackMode, m) {
+TORCH_LIBRARY_IMPL(_, Fake, m) {
   m.fallback(torch::CppFunction::makeFromBoxedFunction<&torchdistx::detail::runFakeHandler>());
 }
 
@@ -631,17 +631,17 @@ thread_local std::size_t tls_fake_mode_level = 0;
 void enableFakeMode(bool value) {
   if (value) {
     if (tls_fake_mode_level++ == 0) {
-      tls_set_dispatch_key_included(detail::kFakeDispatchKey, value);
+      tls_set_dispatch_key_included(DispatchKey::Fake, value);
     }
   } else if (tls_fake_mode_level > 0) {
     if (tls_fake_mode_level-- == 1) {
-      tls_set_dispatch_key_included(detail::kFakeDispatchKey, value);
+      tls_set_dispatch_key_included(DispatchKey::Fake, value);
     }
   }
 }
 
 bool isFake(const TensorBase& tensor) noexcept {
-  return tensor.key_set().has(detail::kFakeDispatchKey);
+  return tensor.key_set().has(DispatchKey::Fake);
 }
 
 FakeTensor::FakeTensor(const TensorBase& tensor, bool unsafe)

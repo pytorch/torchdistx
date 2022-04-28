@@ -20,7 +20,9 @@
 #include <ATen/ThreadLocalState.h>
 #include <ATen/core/VariableHooksInterface.h>
 #include <ATen/core/dispatch/Dispatcher.h>
+#include <ATen/core/ivalue.h>
 #include <ATen/core/jit_type.h>
+#include <ATen/core/stack.h>
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
 #include <c10/core/DispatchKeySet.h>
@@ -153,7 +155,7 @@ class TensorRecord {
 };
 
 void TensorRecord::keepAlive(const Tensor& view) {
-  auto record = unsafeAsFake(view).getData<TensorRecord>(kDeferredInitDispatchKey);
+  auto record = unsafeAsFake(view).getData<TensorRecord>(DispatchKey::DeferredInit);
 
   TORCH_INTERNAL_ASSERT(record,
       "The tensor has no recorded deferred-init operation.");
@@ -308,7 +310,7 @@ const Tensor& Op::getOutput(std::size_t idx) const noexcept {
 }
 
 inline TensorRecord& getTensorRecord(const Tensor& fake) {
-  auto* record = unsafeAsFake(fake).unsafeGetData<TensorRecord>(kDeferredInitDispatchKey);
+  auto* record = unsafeAsFake(fake).unsafeGetData<TensorRecord>(DispatchKey::DeferredInit);
 
   TORCH_INTERNAL_ASSERT(record != nullptr,
       "The tensor has no recorded deferred-init operation.");
@@ -706,8 +708,8 @@ void recordOp(Op&& op, Stack& outputs) {
 void ensureTensorRecordSet(const Op& op, Stack& outputs) {
   auto fn = [](Tensor& tensor) {
     if (isFake(tensor)) {
-      if (FakeTensor fake = unsafeAsFake(tensor); !fake.hasData(kDeferredInitDispatchKey)) {
-        fake.setData(kDeferredInitDispatchKey, std::make_shared<TensorRecord>());
+      if (FakeTensor fake = unsafeAsFake(tensor); !fake.hasData(DispatchKey::DeferredInit)) {
+        fake.setData(DispatchKey::DeferredInit, std::make_shared<TensorRecord>());
       }
     }
 
@@ -753,8 +755,6 @@ class DeferredInitHandler {
   void run();
 
  private:
-  void redispatchToBackend();
-
   void validateTensorArguments() const;
 
   // Indicates whether an operation requires non-fake arguments to compute its
@@ -781,22 +781,10 @@ class DeferredInitHandler {
 
 // NOLINTNEXTLINE(cert-err58-cpp)
 const DispatchKeySet DeferredInitHandler::kAfterDeferredInitKeySet_{DispatchKeySet::FULL_AFTER,
-                                                                    kDeferredInitDispatchKey};
+                                                                    DispatchKey::DeferredInit};
 
 void DeferredInitHandler::run() {
   NoDeferredInit guard{};
-
-  // We do not want to handle operations that are run inside `torch.Tensor()`
-  // since returning fake tensors from them would cause the function to fail.
-  // However because we don't have a dedicated dispatch key in c10, we can't
-  // exclude our handler from dispatch. Once again we leverage functorch and
-  // use its post-autograd key which happens to be excluded exactly where we
-  // need (see `internal_new_from_data()` in torch).
-  if (tls_is_dispatch_key_excluded(DispatchKey::FuncTorchDynamicLayerBackMode)) {
-    redispatchToBackend();
-
-    return;
-  }
 
   validateTensorArguments();
 
@@ -827,14 +815,10 @@ void DeferredInitHandler::run() {
   }
 }
 
-void DeferredInitHandler::redispatchToBackend() {
-  handle_->redispatchBoxed(key_set_ & kAfterDeferredInitKeySet_, stack_);
-}
-
 void DeferredInitHandler::validateTensorArguments() const {
   // If a tensor is fake, we expect it to be constructed in a deferred-init context.
   auto fn = [this](const Tensor& tensor) {
-    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(kDeferredInitDispatchKey),
+    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit),
         "`", handle_->schema().name(), "` has a fake `Tensor` argument which was not constructed "
         "in a deferred-init context.");
 
@@ -866,7 +850,7 @@ inline bool DeferredInitHandler::hasFakeArgument() const noexcept {
 
 void DeferredInitHandler::redispatchToFake() {
   // The `Fake` handler will force newly-constructed tensors to be fake.
-  key_set_ = key_set_.add(kFakeDispatchKey);
+  key_set_ = key_set_.add(DispatchKey::Fake);
 
   handle_->redispatchBoxed(key_set_ & kAfterDeferredInitKeySet_, stack_);
 }
@@ -898,12 +882,12 @@ void runDeferredInitHandler(const OperatorHandle& op, DispatchKeySet key_set, St
 }
 
 void enableDeferredInitHandler(bool value) noexcept {
-  c10::impl::tls_set_dispatch_key_included(kDeferredInitDispatchKey, value);
+  c10::impl::tls_set_dispatch_key_included(DispatchKey::DeferredInit, value);
 }
 
 bool isDeferredInitEnabled() noexcept {
-  if (tls_is_dispatch_key_included(kDeferredInitDispatchKey)) {
-    return !tls_is_dispatch_key_excluded(kDeferredInitDispatchKey);
+  if (tls_is_dispatch_key_included(DispatchKey::DeferredInit)) {
+    return !tls_is_dispatch_key_excluded(DispatchKey::DeferredInit);
   } else {
     return false;
   }
@@ -913,7 +897,7 @@ bool isDeferredInitEnabled() noexcept {
 }  // namespace torchdistx::detail
 
 // NOLINTNEXTLINE(cert-err58-cpp, clang-diagnostic-reserved-identifier)
-TORCH_LIBRARY_IMPL(_, /*DeferredInit*/ FuncTorchDynamicLayerFrontMode, m) {
+TORCH_LIBRARY_IMPL(_, DeferredInit, m) {
   m.fallback(
       torch::CppFunction::makeFromBoxedFunction<&torchdistx::detail::runDeferredInitHandler>());
 }
@@ -1074,7 +1058,7 @@ class ProxyVariableHooks : public VariableHooksInterface {
 
  private:
   static void validateTensorArgument(const char* op_name, const TensorBase& tensor) {
-    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(kDeferredInitDispatchKey),
+    TORCH_CHECK_VALUE(!isFake(tensor) || unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit),
         "`VariableHooks::", op_name, "` has a fake `Tensor` argument which was not constructed in "
         "a deferred-init context.");
   }
@@ -1173,7 +1157,7 @@ void enableDeferredInit(bool value) {
 }
 
 Tensor materializeTensor(const Tensor& tensor) {
-  if (isFake(tensor) && unsafeAsFake(tensor).hasData(detail::kDeferredInitDispatchKey)) {
+  if (isFake(tensor) && unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit)) {
     return detail::materialize(tensor);
   } else {
     return tensor;
