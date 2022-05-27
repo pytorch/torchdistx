@@ -93,12 +93,16 @@ class FakePyInterpreter {
     failCall("is_contiguous");
   }
 
+  [[noreturn]] static Device device(const PyInterpreter*, const TensorImpl*) {
+    failCall("device");
+  }
+
   [[noreturn]] static void failCall(const char* function_name) {
     TORCH_INTERNAL_ASSERT(false,
         "`FakePyInterpreter::", function_name, "()` run unexpectedly.");
   }
 
-  FakePyInterpreter() noexcept : impl_{getName, decref, detach, dispatch, is_contiguous} {}
+  FakePyInterpreter() noexcept : impl_{getName, decref, detach, dispatch, is_contiguous, device} {}
 
  public:
   FakePyInterpreter(FakePyInterpreter&) = delete;
