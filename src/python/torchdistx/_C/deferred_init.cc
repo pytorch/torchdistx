@@ -80,6 +80,14 @@ py::object materializeVariable(const py::object& var) {
     return var;
   }
 
+  // We might have already materialized `data`. Make sure that we preserve its
+  // identity on the Python side and avoid creating a new Python tensor.
+  c10::optional<PyObject*> opt_materialized_var =
+      materialized_data.unsafeGetTensorImpl()->check_pyobj(getPyInterpreter());
+  if (opt_materialized_var.has_value()) {
+    return py::reinterpret_borrow<py::object>(*opt_materialized_var);
+  }
+
   // Otherwise ensure that our materialized tensor has the same Python class as
   // the original tensor.
   return makeVariable(Py_TYPE(naked_var), std::move(materialized_data));
