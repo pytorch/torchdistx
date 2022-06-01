@@ -227,12 +227,7 @@ function(torchdist_add_target target)
                 LINKER:-z,relro
         )
 
-        if(arg_PYTHON_MODULE)
-            target_link_options(${target}
-                PRIVATE
-                    LINKER:-z,undefs
-            )
-        else()
+        if(NOT arg_PYTHON_MODULE)
             target_link_options(${target}
                 PRIVATE
                     LINKER:-z,defs
