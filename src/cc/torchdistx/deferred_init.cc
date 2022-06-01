@@ -125,10 +125,6 @@ class OpOutputDescriptor {
 // instance of `TensorRecord` stored along with the tensor.
 class TensorRecord {
  public:
-  bool valid() const noexcept {
-    return opt_output_desc_.has_value();
-  }
-
   const OpOutputDescriptor& output_descriptor() const {
     return opt_output_desc_.value();
   }
@@ -142,12 +138,6 @@ class TensorRecord {
   // tensor and has an in-place operation. In such case we have to ensure that
   // we don't delete recorded operations that are only referenced by `view`.
   void keepAlive(const Tensor& view);
-
-  void dispose() noexcept {
-    opt_output_desc_.reset();
-
-    view_records_.clear();
-  }
 
  private:
   optional<OpOutputDescriptor> opt_output_desc_{};
@@ -719,11 +709,8 @@ void ensureTensorRecordSet(const Op& op, Stack& outputs) {
   convertTensors(outputs, op.num_outputs(), fn);
 }
 
-Tensor materialize(const Tensor& fake, bool retain_context = false) {
+Tensor materialize(const Tensor& fake) {
   TensorRecord& record = getTensorRecord(fake);
-
-  TORCH_CHECK_VALUE(record.valid(),
-      "The tensor has already been materialized.");
 
   const OpOutputDescriptor& output_desc = record.output_descriptor();
 
@@ -735,12 +722,6 @@ Tensor materialize(const Tensor& fake, bool retain_context = false) {
   // so instead we explicitly set `requires_grad` after materialization.
   if (fake.is_leaf() && fake.requires_grad()) {
     out.set_requires_grad(true);
-  }
-
-  // If true, we do not delete our reference to the context object. This means
-  // we can call this function again to get the materialized tensor.
-  if (!retain_context) {
-    record.dispose();
   }
 
   return out;
@@ -835,9 +816,7 @@ inline bool DeferredInitHandler::isTerminalOp() const noexcept {
 void DeferredInitHandler::materializeFakeArguments() {
   auto fn = [](Tensor& tensor) {
     if (isFake(tensor)) {
-      // The reason why we retain the context here is because we want to allow
-      // the user to call `materialize()` on `tensor` at a later time.
-      tensor = materialize(tensor, /*retain_context=*/true);
+      tensor = materialize(tensor);
     }
   };
 
