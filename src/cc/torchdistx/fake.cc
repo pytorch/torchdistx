@@ -21,14 +21,11 @@
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
 #include <c10/core/DispatchKeySet.h>
-#include <c10/core/SafePyObject.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/core/TensorOptions.h>
 #include <c10/core/impl/LocalDispatchKeySet.h>
-#include <c10/core/impl/PyInterpreter.h>
 #include <c10/util/Optional.h>
 #include <c10/util/intrusive_ptr.h>
-#include <c10/util/python_stub.h>
 #include <torch/library.h>
 
 #include "stack_utils.h"
@@ -47,7 +44,6 @@ using at::IValue;
 using at::nullopt;
 using at::OperatorHandle;
 using at::optional;
-using at::SafePyObject;
 using at::ScalarType;
 using at::Storage;
 using at::Tensor;
@@ -57,8 +53,6 @@ using at::typeMetaToScalarType;
 using at::VariableVersion;
 
 using c10::impl::ExcludeDispatchKeyGuard;
-using c10::impl::PyInterpreter;
-using c10::impl::PyInterpreterStatus;
 using c10::impl::tls_set_dispatch_key_included;
 
 using torch::jit::Stack;
@@ -66,69 +60,6 @@ using torch::jit::Stack;
 };  // namespace torchdistx
 
 namespace torchdistx::detail {
-namespace {
-
-// See the note [Meta to Fake Tensor] to understand why we have a non-functional
-// Python interpreter here.
-class FakePyInterpreter {
- private:
-  [[noreturn]] static std::string getName(const PyInterpreter*) {
-    failCall("name");
-  }
-
-  [[noreturn]] static void decref(const PyInterpreter*, PyObject*, bool) {
-    failCall("decref");
-  }
-
-  [[noreturn]] static intrusive_ptr<TensorImpl> detach(const PyInterpreter*, const TensorImpl*) {
-    failCall("detach");
-  }
-
-  [[noreturn]] static void dispatch(const PyInterpreter*, const OperatorHandle&, Stack*,
-                                    const std::shared_ptr<SafePyObject>&) {
-    failCall("dispatch");
-  }
-
-  [[noreturn]] static bool is_contiguous(const PyInterpreter*, const TensorImpl*) {
-    failCall("is_contiguous");
-  }
-
-  [[noreturn]] static Device device(const PyInterpreter*, const TensorImpl*) {
-    failCall("device");
-  }
-
-  [[noreturn]] static void failCall(const char* function_name) {
-    TORCH_INTERNAL_ASSERT(false,
-        "`FakePyInterpreter::", function_name, "()` run unexpectedly.");
-  }
-
-  FakePyInterpreter() noexcept : impl_{getName, decref, detach, dispatch, is_contiguous, device} {}
-
- public:
-  FakePyInterpreter(FakePyInterpreter&) = delete;
-
-  FakePyInterpreter& operator=(FakePyInterpreter&) = delete;
-
-  FakePyInterpreter(FakePyInterpreter&&) = delete;
-
-  FakePyInterpreter& operator=(FakePyInterpreter&&) = delete;
-
-  ~FakePyInterpreter() {
-    impl_.disarm();
-  }
-
- public:
-  static PyInterpreter* get() noexcept {
-    static FakePyInterpreter singleton{};
-
-    return &singleton.impl_;
-  }
-
- private:
-  PyInterpreter impl_;
-};
-
-}  // namespace
 
 // A fake tensor acts very much like an opaque tensor (i.e. `OpaqueTensorImpl`)
 // to the dispatch keys above `Fake`. This means it has no storage allocated to
@@ -158,10 +89,6 @@ class FakeTensorImpl : public TensorImpl {
   static intrusive_ptr<FakeTensorImpl> makeFromMeta(intrusive_ptr<TensorImpl> meta_impl,
                                                     Device fake_device);
 
-  // Returns the fake tensor that is holding `meta_impl` or null if `meta_impl`
-  // is not owned by a fake tensor.
-  static intrusive_ptr<FakeTensorImpl> tryGetFromMeta(TensorImpl& meta_impl) noexcept;
-
  public:
   void shallow_copy_from(const intrusive_ptr<TensorImpl>& impl) override;
 
@@ -189,9 +116,6 @@ class FakeTensorImpl : public TensorImpl {
   std::unordered_map<DispatchKey, std::shared_ptr<void>> dispatch_data{};
 
  private:
-  // Assigns `meta_impl` as the meta tensor of this instance.
-  void setMeta(intrusive_ptr<TensorImpl>&& meta_impl);
-
   // The meta tensor that this instance is holding. It is used for diverting
   // operators to the meta backend.
   intrusive_ptr<TensorImpl> meta_impl_;
@@ -259,33 +183,9 @@ intrusive_ptr<FakeTensorImpl> FakeTensorImpl::makeFromMeta(intrusive_ptr<TensorI
   fake_impl->refresh_numel();
   fake_impl->refresh_contiguous();
 
-  fake_impl->setMeta(std::move(meta_impl));
+  fake_impl->meta_impl_ = std::move(meta_impl);
 
   return fake_impl;
-}
-
-intrusive_ptr<FakeTensorImpl> FakeTensorImpl::tryGetFromMeta(TensorImpl& meta_impl) noexcept {
-  // Note [Meta to Fake Tensor]
-  // To access the fake tensor holding `meta_impl` we take advantage of the
-  // `pyobj_` field of `TensorImpl`. Since our meta tensor is never exposed
-  // to Python it is safe to use its `pyobj_` field to store a pointer back
-  // to its fake tensor. This way we can access the fake tensor in constant
-  // time without using any other data structure.
-  //
-  // Our `FakePyInterpreter` has no purpose other then sanity check. We use
-  // it solely to retrieve the fake tensor and any call to it will cause an
-  // assertion failure.
-  optional<PyObject*> opt_fake_py_obj = meta_impl.check_pyobj(FakePyInterpreter::get());
-  if (opt_fake_py_obj != nullopt) {
-    // We lie about `pyobj_` being a `PyObject`. It actually points to the fake
-    // tensor owning `meta_impl`.
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto* fake_impl_ptr = reinterpret_cast<FakeTensorImpl*>(*opt_fake_py_obj);
-
-    return intrusive_ptr<FakeTensorImpl>::reclaim_copy(fake_impl_ptr);
-  } else {
-    return {};
-  }
 }
 
 void FakeTensorImpl::shallow_copy_from(const intrusive_ptr<TensorImpl>& impl) {
@@ -312,9 +212,7 @@ intrusive_ptr<TensorImpl> FakeTensorImpl::shallow_copy_and_detach(
   impl->refresh_numel();
   impl->refresh_contiguous();
 
-  intrusive_ptr<TensorImpl> meta_impl = meta_impl_->shallow_copy_and_detach(0, false);
-
-  impl->setMeta(std::move(meta_impl));
+  impl->meta_impl_ = meta_impl_->shallow_copy_and_detach(0, false);
 
   return impl;
 }
@@ -328,9 +226,7 @@ intrusive_ptr<TensorImpl> FakeTensorImpl::shallow_copy_and_detach(
   impl->refresh_numel();
   impl->refresh_contiguous();
 
-  intrusive_ptr<TensorImpl> meta_impl = meta_impl_->shallow_copy_and_detach(0, false);
-
-  impl->setMeta(std::move(meta_impl));
+  impl->meta_impl_ = meta_impl_->shallow_copy_and_detach(0, false);
 
   return impl;
 }
@@ -343,25 +239,13 @@ void FakeTensorImpl::release_resources() {
   dispatch_data.clear();
 }
 
-void FakeTensorImpl::setMeta(intrusive_ptr<TensorImpl>&& impl) {
-  constexpr auto s = PyInterpreterStatus::DEFINITELY_UNINITIALIZED;
-
-  // See the note [Meta to Fake Tensor] to understand why we lie about our
-  // instance being a Python object.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-  impl->init_pyobj(FakePyInterpreter::get(), reinterpret_cast<PyObject*>(this), s);
-
-  meta_impl_ = std::move(impl);
-}
-
 namespace {
 
-// Returns the meta tensor held by `fake`.
-inline Tensor getMetaTensor(const Tensor& fake) noexcept {
+inline intrusive_ptr<FakeTensorImpl> getFakeTensorImpl(const Tensor& tensor) {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-  const auto* fake_impl = static_cast<const FakeTensorImpl*>(fake.unsafeGetTensorImpl());
+  auto* fake_impl = static_cast<FakeTensorImpl*>(tensor.unsafeGetTensorImpl());
 
-  return Tensor::wrap_tensor_impl(fake_impl->meta_impl());
+  return intrusive_ptr<FakeTensorImpl>::reclaim_copy(fake_impl);
 }
 
 // The catch-all handler for the `Fake` dispatch key.
@@ -387,6 +271,8 @@ class FakeHandler {
 
   void convertFakeArgumentsToMetaTensors();
 
+  Tensor convertFakeToMetaTensor(const Tensor& fake);
+
   bool shouldFakeOp() const;
 
   void convertDeviceArgumentToMeta() noexcept;
@@ -398,6 +284,8 @@ class FakeHandler {
   void convertMetaOutputsToFakeTensors();
 
   void convertToFakeTensor(Tensor& tensor);
+
+  intrusive_ptr<FakeTensorImpl> tryGetFakeTensorImpl(const intrusive_ptr<TensorImpl>& meta_impl);
 
   void redispatchToBackend();
 
@@ -412,6 +300,7 @@ class FakeHandler {
   Device output_device_ = at::kCPU;
   bool has_fake_ = false;
   bool has_tensor_arg_ = false;
+  std::unordered_map<const TensorImpl*, intrusive_ptr<FakeTensorImpl>> meta_to_fake_{};
 };
 
 // NOLINTNEXTLINE(cert-err58-cpp)
@@ -540,7 +429,7 @@ Device FakeHandler::determineOutputDevice() const {
 void FakeHandler::convertFakeArgumentsToMetaTensors() {
   auto fn = [this](Tensor& tensor) {
     if (isFake(tensor)) {
-      tensor = getMetaTensor(tensor);
+      tensor = convertFakeToMetaTensor(tensor);
 
       has_fake_ = true;
     }
@@ -551,6 +440,18 @@ void FakeHandler::convertFakeArgumentsToMetaTensors() {
   };
 
   convertTensors(*stack_, handle_->schema().arguments().size(), fn);
+}
+
+Tensor FakeHandler::convertFakeToMetaTensor(const Tensor& fake) {
+  intrusive_ptr<FakeTensorImpl> fake_impl = getFakeTensorImpl(fake);
+
+  const intrusive_ptr<TensorImpl>& meta_impl = fake_impl->meta_impl();
+
+  // We record the mapping from the meta tensor to its fake tensor so that we
+  // can retrieve the fake if the meta gets returned by an in-place operator.
+  meta_to_fake_.emplace(meta_impl.get(), std::move(fake_impl));
+
+  return Tensor::wrap_tensor_impl(meta_impl);
 }
 
 inline bool FakeHandler::shouldFakeOp() const {
@@ -599,7 +500,8 @@ void FakeHandler::convertMetaOutputsToFakeTensors() {
 void FakeHandler::convertToFakeTensor(Tensor& tensor) {
   const intrusive_ptr<TensorImpl>& meta_impl = tensor.getIntrusivePtr();
 
-  intrusive_ptr<FakeTensorImpl> fake_impl = FakeTensorImpl::tryGetFromMeta(*meta_impl);
+  intrusive_ptr<FakeTensorImpl> fake_impl = tryGetFakeTensorImpl(meta_impl);
+
   // If `fake_impl` is not null, it means we had an in-place operator that
   // returned one of its tensor arguments.
   if (fake_impl) {
@@ -611,6 +513,15 @@ void FakeHandler::convertToFakeTensor(Tensor& tensor) {
   }
 
   tensor = Tensor::wrap_tensor_impl(std::move(fake_impl));
+}
+
+intrusive_ptr<FakeTensorImpl> FakeHandler::tryGetFakeTensorImpl(
+    const intrusive_ptr<TensorImpl>& meta_impl) {
+  if (auto pos = meta_to_fake_.find(meta_impl.get()); pos != meta_to_fake_.end()) {
+    return pos->second;
+  } else {
+    return {};
+  }
 }
 
 void FakeHandler::redispatchToBackend() {

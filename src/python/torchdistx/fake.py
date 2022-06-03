@@ -25,7 +25,7 @@ def _patch_tensor_repr() -> Callable[[torch.Tensor], str]:
                 s += f", dtype={tensor.dtype}"
 
             if tensor.device.type != "cpu":
-                s += f", device={tensor.device})"
+                s += f", device={tensor.device}"
 
             if tensor.requires_grad:
                 s += ", requires_grad=True"
