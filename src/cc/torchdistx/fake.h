@@ -22,12 +22,7 @@ class TensorBase;
 namespace torchdistx {
 namespace detail {
 
-// Since as of this implementation PyTorch is out of dispatch keys we hijack
-// the dispatch key of functorch. The implication of this workaround is that
-// functorch and fake tensors cannot be used in the same process.
-//
-// TODO: Once the dispatch key limitation is resolved define our own key.
-constexpr auto kFakeDispatchKey = at::DispatchKey::FuncTorchDynamicLayerBackMode;
+class FakeTensorImpl;
 
 }  // namespace detail
 
@@ -37,31 +32,41 @@ TDX_API void enableFakeMode(bool value);
 // Indicates whether `tensor` is fake.
 TDX_API bool isFake(const at::TensorBase& tensor) noexcept;
 
-// Returns the meta storage of `fake`.
-TDX_API const at::Storage& getFakeMetaStorage(const at::TensorBase& fake);
+// Provides access to the properties of a fake tensor.
+class TDX_API FakeTensor {
+ public:
+  explicit FakeTensor(const at::TensorBase& tensor, bool unsafe = false);
 
-// Stores an opaque context object for `key` in `fake`.
-TDX_API void setFakeContext(at::TensorBase& fake, at::DispatchKey key, std::shared_ptr<void> ctx);
+ public:
+  void setData(at::DispatchKey key, std::shared_ptr<void> data);
 
-// Determines whether `key` has a context object in `fake`.
-TDX_API bool hasFakeContext(const at::TensorBase& fake, at::DispatchKey key);
+  bool hasData(at::DispatchKey key) const noexcept;
 
-// Retrieves the context object of `key` from `fake`.
-TDX_API std::shared_ptr<void> getFakeContext(const at::TensorBase& fake, at::DispatchKey key);
+  std::shared_ptr<void> getData(at::DispatchKey key) const;
 
-// Retrieves the context object of `key` from `fake`.
-template <typename ContextType>
-TDX_API inline auto getFakeContext(const at::TensorBase& fake, at::DispatchKey key) {
-  return std::static_pointer_cast<ContextType>(getFakeContext(fake, key));
-}
+  template <typename T>
+  inline auto getData(at::DispatchKey key) const {
+    return std::static_pointer_cast<T>(getData(key));
+  }
 
-// Retrieves the context object of `key` from `fake`.
-TDX_API void* unsafeGetFakeContext(const at::TensorBase& fake, at::DispatchKey key);
+  void* unsafeGetData(at::DispatchKey key) const;
 
-// Retrieves the context object of `key` from `fake`.
-template <typename ContextType>
-TDX_API inline auto unsafeGetFakeContext(const at::TensorBase& fake, at::DispatchKey key) {
-  return static_cast<ContextType*>(unsafeGetFakeContext(fake, key));
-}
+  template <typename T>
+  inline auto unsafeGetData(at::DispatchKey key) const {
+    return static_cast<T*>(unsafeGetData(key));
+  }
+
+ public:
+  const at::Storage& meta_storage() const noexcept;
+
+ private:
+  detail::FakeTensorImpl* impl_;
+};
+
+// Treats `tensor` as fake.
+TDX_API FakeTensor asFake(const at::TensorBase& tensor);
+
+// Treats `tensor` as fake without performing any type checks.
+TDX_API FakeTensor unsafeAsFake(const at::TensorBase& tensor) noexcept;
 
 }  // namespace torchdistx

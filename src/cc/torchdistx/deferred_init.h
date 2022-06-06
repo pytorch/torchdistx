@@ -18,16 +18,6 @@ class Tensor;
 }  // namespace at
 
 namespace torchdistx {
-namespace detail {
-
-// Since as of this implementation PyTorch is out of dispatch keys we hijack
-// the dispatch key of functorch. The implication of this workaround is that
-// functorch and deferred-init cannot be used in the same process.
-//
-// TODO: Once the dispatch key limitation is resolved define our own key.
-constexpr auto kDeferredInitDispatchKey = at::DispatchKey::FuncTorchDynamicLayerFrontMode;
-
-}  // namespace detail
 
 // Forces all newly-constructed tensors on the calling thread to be fake while
 // also recording all operations performed on them in memory. Such tensors can
@@ -39,7 +29,7 @@ TDX_API at::Tensor materializeTensor(const at::Tensor& tensor);
 
 // Temporarily disables deferred-init.
 class TDX_API NoDeferredInit {
-  c10::impl::ExcludeDispatchKeyGuard guard_{detail::kDeferredInitDispatchKey};
+  c10::impl::ExcludeDispatchKeyGuard guard_{at::DispatchKey::DeferredInit};
 };
 
 }  // namespace torchdistx

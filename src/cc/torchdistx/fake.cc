@@ -21,14 +21,11 @@
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
 #include <c10/core/DispatchKeySet.h>
-#include <c10/core/SafePyObject.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/core/TensorOptions.h>
 #include <c10/core/impl/LocalDispatchKeySet.h>
-#include <c10/core/impl/PyInterpreter.h>
 #include <c10/util/Optional.h>
 #include <c10/util/intrusive_ptr.h>
-#include <c10/util/python_stub.h>
 #include <torch/library.h>
 
 #include "stack_utils.h"
@@ -47,7 +44,6 @@ using at::IValue;
 using at::nullopt;
 using at::OperatorHandle;
 using at::optional;
-using at::SafePyObject;
 using at::ScalarType;
 using at::Storage;
 using at::Tensor;
@@ -57,8 +53,6 @@ using at::typeMetaToScalarType;
 using at::VariableVersion;
 
 using c10::impl::ExcludeDispatchKeyGuard;
-using c10::impl::PyInterpreter;
-using c10::impl::PyInterpreterStatus;
 using c10::impl::tls_set_dispatch_key_included;
 
 using torch::jit::Stack;
@@ -66,59 +60,6 @@ using torch::jit::Stack;
 };  // namespace torchdistx
 
 namespace torchdistx::detail {
-namespace {
-
-// See the note [Meta to Fake Tensor] to understand why we have a non-functional
-// Python interpreter here.
-class FakePyInterpreter {
- private:
-  [[noreturn]] static std::string getName(const PyInterpreter*) {
-    failCall("name");
-  }
-
-  [[noreturn]] static void decref(const PyInterpreter*, PyObject*, bool) {
-    failCall("decref");
-  }
-
-  [[noreturn]] static intrusive_ptr<TensorImpl> detach(const PyInterpreter*, const TensorImpl*) {
-    failCall("detach");
-  }
-
-  [[noreturn]] static void dispatch(const PyInterpreter*, const OperatorHandle&, Stack*,
-                                    const std::shared_ptr<SafePyObject>&) {
-    failCall("dispatch");
-  }
-
-  [[noreturn]] static void failCall(const char* function_name) {
-    TORCH_INTERNAL_ASSERT(false,
-        "`FakePyInterpreter::", function_name, "()` run unexpectedly.");
-  }
-
-  FakePyInterpreter() noexcept : impl_{getName, decref, detach, dispatch} {}
-
- public:
-  FakePyInterpreter(FakePyInterpreter&) = delete;
-
-  FakePyInterpreter& operator=(FakePyInterpreter&) = delete;
-
-  FakePyInterpreter(FakePyInterpreter&&) = delete;
-
-  FakePyInterpreter& operator=(FakePyInterpreter&&) = delete;
-
-  ~FakePyInterpreter() {
-    impl_.disarm();
-  }
-
- public:
-  static PyInterpreter* get() noexcept {
-    static FakePyInterpreter singleton{};
-
-    return &singleton.impl_;
-  }
-
- private:
-  PyInterpreter impl_;
-};
 
 // A fake tensor acts very much like an opaque tensor (i.e. `OpaqueTensorImpl`)
 // to the dispatch keys above `Fake`. This means it has no storage allocated to
@@ -133,6 +74,7 @@ class FakeTensorImpl : public TensorImpl {
   // actual factory function for fake tensors.
   explicit FakeTensorImpl() noexcept : TensorImpl{DispatchKeySet{}, caffe2::TypeMeta{}, nullopt} {}
 
+ private:
   static DispatchKeySet computeFakeKeySet(TensorImpl& meta_impl, Device fake_device);
 
   void shallowCopyFromMeta(const TensorImpl& meta_impl, Device fake_device,
@@ -146,10 +88,6 @@ class FakeTensorImpl : public TensorImpl {
   // using `fake_device` as the device.
   static intrusive_ptr<FakeTensorImpl> makeFromMeta(intrusive_ptr<TensorImpl> meta_impl,
                                                     Device fake_device);
-
-  // Returns the fake tensor that is holding `meta_impl` or null if `meta_impl`
-  // is not owned by a fake tensor.
-  static intrusive_ptr<FakeTensorImpl> tryGetFromMeta(TensorImpl& meta_impl) noexcept;
 
  public:
   void shallow_copy_from(const intrusive_ptr<TensorImpl>& impl) override;
@@ -175,12 +113,9 @@ class FakeTensorImpl : public TensorImpl {
   // Each dispatch handler can have its own contextual data associated with a
   // fake tensor. For example the `DeferredInit` handler stores the operation
   // graph node that output the fake tensor in this map.
-  std::unordered_map<DispatchKey, std::shared_ptr<void>> dispatch_context{};
+  std::unordered_map<DispatchKey, std::shared_ptr<void>> dispatch_data{};
 
  private:
-  // Assigns `meta_impl` as the meta tensor of this instance.
-  void setMeta(intrusive_ptr<TensorImpl>&& meta_impl);
-
   // The meta tensor that this instance is holding. It is used for diverting
   // operators to the meta backend.
   intrusive_ptr<TensorImpl> meta_impl_;
@@ -195,7 +130,7 @@ DispatchKeySet FakeTensorImpl::computeFakeKeySet(TensorImpl& meta_impl, Device f
 
   // We also mix the `Fake` dispatch key to ensure that the Fake handler gets
   // called instead of the actual backend handler.
-  DispatchKeySet key_set{runtime_backend_key, kFakeDispatchKey};
+  DispatchKeySet key_set{runtime_backend_key, DispatchKey::Fake};
 
   if (meta_impl.is_inference()) {
     return key_set;
@@ -248,37 +183,13 @@ intrusive_ptr<FakeTensorImpl> FakeTensorImpl::makeFromMeta(intrusive_ptr<TensorI
   fake_impl->refresh_numel();
   fake_impl->refresh_contiguous();
 
-  fake_impl->setMeta(std::move(meta_impl));
+  fake_impl->meta_impl_ = std::move(meta_impl);
 
   return fake_impl;
 }
 
-intrusive_ptr<FakeTensorImpl> FakeTensorImpl::tryGetFromMeta(TensorImpl& meta_impl) noexcept {
-  // Note [Meta to Fake Tensor]
-  // To access the fake tensor holding `meta_impl` we take advantage of the
-  // `pyobj_` field of `TensorImpl`. Since our meta tensor is never exposed
-  // to Python it is safe to use its `pyobj_` field to store a pointer back
-  // to its fake tensor. This way we can access the fake tensor in constant
-  // time without using any other data structure.
-  //
-  // Our `FakePyInterpreter` has no purpose other then sanity check. We use
-  // it solely to retrieve the fake tensor and any call to it will cause an
-  // assertion failure.
-  optional<PyObject*> opt_fake_py_obj = meta_impl.check_pyobj(FakePyInterpreter::get());
-  if (opt_fake_py_obj != nullopt) {
-    // We lie about `pyobj_` being a `PyObject`. It actually points to the fake
-    // tensor owning `meta_impl`.
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto* fake_impl_ptr = reinterpret_cast<FakeTensorImpl*>(*opt_fake_py_obj);
-
-    return intrusive_ptr<FakeTensorImpl>::reclaim_copy(fake_impl_ptr);
-  } else {
-    return {};
-  }
-}
-
 void FakeTensorImpl::shallow_copy_from(const intrusive_ptr<TensorImpl>& impl) {
-  TORCH_CHECK(impl->key_set().has(kFakeDispatchKey),
+  TORCH_CHECK(impl->key_set().has(DispatchKey::Fake),
       "The source tensor was expected to be a fake tensor.");
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
@@ -301,9 +212,7 @@ intrusive_ptr<TensorImpl> FakeTensorImpl::shallow_copy_and_detach(
   impl->refresh_numel();
   impl->refresh_contiguous();
 
-  intrusive_ptr<TensorImpl> meta_impl = meta_impl_->shallow_copy_and_detach(0, false);
-
-  impl->setMeta(std::move(meta_impl));
+  impl->meta_impl_ = meta_impl_->shallow_copy_and_detach(0, false);
 
   return impl;
 }
@@ -317,9 +226,7 @@ intrusive_ptr<TensorImpl> FakeTensorImpl::shallow_copy_and_detach(
   impl->refresh_numel();
   impl->refresh_contiguous();
 
-  intrusive_ptr<TensorImpl> meta_impl = meta_impl_->shallow_copy_and_detach(0, false);
-
-  impl->setMeta(std::move(meta_impl));
+  impl->meta_impl_ = meta_impl_->shallow_copy_and_detach(0, false);
 
   return impl;
 }
@@ -329,26 +236,16 @@ void FakeTensorImpl::release_resources() {
 
   meta_impl_ = {};
 
-  dispatch_context.clear();
+  dispatch_data.clear();
 }
 
-void FakeTensorImpl::setMeta(intrusive_ptr<TensorImpl>&& impl) {
-  constexpr auto s = PyInterpreterStatus::DEFINITELY_UNINITIALIZED;
+namespace {
 
-  // See the note [Meta to Fake Tensor] to understand why we lie about our
-  // instance being a Python object.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-  impl->init_pyobj(FakePyInterpreter::get(), reinterpret_cast<PyObject*>(this), s);
-
-  meta_impl_ = std::move(impl);
-}
-
-// Returns the meta tensor held by `fake`.
-inline Tensor getMetaTensor(const Tensor& fake) noexcept {
+inline intrusive_ptr<FakeTensorImpl> getFakeTensorImpl(const Tensor& tensor) {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-  const auto* fake_impl = static_cast<const FakeTensorImpl*>(fake.unsafeGetTensorImpl());
+  auto* fake_impl = static_cast<FakeTensorImpl*>(tensor.unsafeGetTensorImpl());
 
-  return Tensor::wrap_tensor_impl(fake_impl->meta_impl());
+  return intrusive_ptr<FakeTensorImpl>::reclaim_copy(fake_impl);
 }
 
 // The catch-all handler for the `Fake` dispatch key.
@@ -374,6 +271,8 @@ class FakeHandler {
 
   void convertFakeArgumentsToMetaTensors();
 
+  Tensor convertFakeToMetaTensor(const Tensor& fake);
+
   bool shouldFakeOp() const;
 
   void convertDeviceArgumentToMeta() noexcept;
@@ -385,6 +284,8 @@ class FakeHandler {
   void convertMetaOutputsToFakeTensors();
 
   void convertToFakeTensor(Tensor& tensor);
+
+  intrusive_ptr<FakeTensorImpl> tryGetFakeTensorImpl(const intrusive_ptr<TensorImpl>& meta_impl);
 
   void redispatchToBackend();
 
@@ -399,17 +300,18 @@ class FakeHandler {
   Device output_device_ = at::kCPU;
   bool has_fake_ = false;
   bool has_tensor_arg_ = false;
+  std::unordered_map<const TensorImpl*, intrusive_ptr<FakeTensorImpl>> meta_to_fake_{};
 };
 
 // NOLINTNEXTLINE(cert-err58-cpp)
-const DispatchKeySet FakeHandler::kAfterFakeKeySet_{DispatchKeySet::FULL_AFTER, kFakeDispatchKey};
+const DispatchKeySet FakeHandler::kAfterFakeKeySet_{DispatchKeySet::FULL_AFTER, DispatchKey::Fake};
 
 inline bool isCPUScalar(const Tensor& tensor) noexcept {
   return tensor.dim() == 0 && tensor.is_cpu();
 }
 
 void FakeHandler::run() {
-  ExcludeDispatchKeyGuard guard{kFakeDispatchKey};
+  ExcludeDispatchKeyGuard guard{DispatchKey::Fake};
 
   assessOp();
 
@@ -527,7 +429,7 @@ Device FakeHandler::determineOutputDevice() const {
 void FakeHandler::convertFakeArgumentsToMetaTensors() {
   auto fn = [this](Tensor& tensor) {
     if (isFake(tensor)) {
-      tensor = getMetaTensor(tensor);
+      tensor = convertFakeToMetaTensor(tensor);
 
       has_fake_ = true;
     }
@@ -538,6 +440,18 @@ void FakeHandler::convertFakeArgumentsToMetaTensors() {
   };
 
   convertTensors(*stack_, handle_->schema().arguments().size(), fn);
+}
+
+Tensor FakeHandler::convertFakeToMetaTensor(const Tensor& fake) {
+  intrusive_ptr<FakeTensorImpl> fake_impl = getFakeTensorImpl(fake);
+
+  const intrusive_ptr<TensorImpl>& meta_impl = fake_impl->meta_impl();
+
+  // We record the mapping from the meta tensor to its fake tensor so that we
+  // can retrieve the fake if the meta gets returned by an in-place operator.
+  meta_to_fake_.emplace(meta_impl.get(), std::move(fake_impl));
+
+  return Tensor::wrap_tensor_impl(meta_impl);
 }
 
 inline bool FakeHandler::shouldFakeOp() const {
@@ -586,7 +500,8 @@ void FakeHandler::convertMetaOutputsToFakeTensors() {
 void FakeHandler::convertToFakeTensor(Tensor& tensor) {
   const intrusive_ptr<TensorImpl>& meta_impl = tensor.getIntrusivePtr();
 
-  intrusive_ptr<FakeTensorImpl> fake_impl = FakeTensorImpl::tryGetFromMeta(*meta_impl);
+  intrusive_ptr<FakeTensorImpl> fake_impl = tryGetFakeTensorImpl(meta_impl);
+
   // If `fake_impl` is not null, it means we had an in-place operator that
   // returned one of its tensor arguments.
   if (fake_impl) {
@@ -598,6 +513,15 @@ void FakeHandler::convertToFakeTensor(Tensor& tensor) {
   }
 
   tensor = Tensor::wrap_tensor_impl(std::move(fake_impl));
+}
+
+intrusive_ptr<FakeTensorImpl> FakeHandler::tryGetFakeTensorImpl(
+    const intrusive_ptr<TensorImpl>& meta_impl) {
+  if (auto pos = meta_to_fake_.find(meta_impl.get()); pos != meta_to_fake_.end()) {
+    return pos->second;
+  } else {
+    return {};
+  }
 }
 
 void FakeHandler::redispatchToBackend() {
@@ -612,25 +536,11 @@ void runFakeHandler(const OperatorHandle& op, DispatchKeySet key_set, Stack* s) 
 }  // namespace torchdistx::detail
 
 // NOLINTNEXTLINE(cert-err58-cpp, clang-diagnostic-reserved-identifier)
-TORCH_LIBRARY_IMPL(_, /*Fake*/ FuncTorchDynamicLayerBackMode, m) {
+TORCH_LIBRARY_IMPL(_, Fake, m) {
   m.fallback(torch::CppFunction::makeFromBoxedFunction<&torchdistx::detail::runFakeHandler>());
 }
 
 namespace torchdistx {
-namespace detail {
-namespace {
-
-FakeTensorImpl* getFakeTensorImpl(const TensorBase& tensor) {
-  TORCH_CHECK(isFake(tensor),
-      "`fake` was expected to be a fake tensor.");
-
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-  return static_cast<detail::FakeTensorImpl*>(tensor.unsafeGetTensorImpl());
-}
-
-}  // namespace
-}  // namespace detail
-
 namespace {
 
 thread_local std::size_t tls_fake_mode_level = 0;
@@ -640,55 +550,68 @@ thread_local std::size_t tls_fake_mode_level = 0;
 void enableFakeMode(bool value) {
   if (value) {
     if (tls_fake_mode_level++ == 0) {
-      tls_set_dispatch_key_included(detail::kFakeDispatchKey, value);
+      tls_set_dispatch_key_included(DispatchKey::Fake, value);
     }
   } else if (tls_fake_mode_level > 0) {
     if (tls_fake_mode_level-- == 1) {
-      tls_set_dispatch_key_included(detail::kFakeDispatchKey, value);
+      tls_set_dispatch_key_included(DispatchKey::Fake, value);
     }
   }
 }
 
 bool isFake(const TensorBase& tensor) noexcept {
-  return tensor.key_set().has(detail::kFakeDispatchKey);
+  return tensor.key_set().has(DispatchKey::Fake);
 }
 
-const Storage& getFakeMetaStorage(const TensorBase& fake) {
-  return detail::getFakeTensorImpl(fake)->meta_impl()->storage();
+FakeTensor::FakeTensor(const TensorBase& tensor, bool unsafe)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+    : impl_{static_cast<detail::FakeTensorImpl*>(tensor.unsafeGetTensorImpl())} {
+  TORCH_CHECK(unsafe || isFake(tensor),
+      "`tensor` was expected to be a fake tensor.");
 }
 
-void setFakeContext(TensorBase& fake, DispatchKey key, std::shared_ptr<void> ctx) {
-  if (ctx) {
-    detail::getFakeTensorImpl(fake)->dispatch_context.insert_or_assign(key, std::move(ctx));
+const Storage& FakeTensor::meta_storage() const noexcept {
+  return impl_->meta_impl()->storage();
+}
+
+void FakeTensor::setData(DispatchKey key, std::shared_ptr<void> data) {
+  if (data) {
+    impl_->dispatch_data.insert_or_assign(key, std::move(data));
   } else {
-    detail::getFakeTensorImpl(fake)->dispatch_context.erase(key);
+    impl_->dispatch_data.erase(key);
   }
 }
 
-bool hasFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
-
-  return ctx.find(key) != ctx.end();
+bool FakeTensor::hasData(DispatchKey key) const noexcept {
+  return impl_->dispatch_data.find(key) != impl_->dispatch_data.end();
 }
 
-std::shared_ptr<void> getFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
+std::shared_ptr<void> FakeTensor::getData(DispatchKey key) const {
+  auto& data = impl_->dispatch_data;
 
-  if (auto pos = ctx.find(key); pos != ctx.end()) {
+  if (auto pos = data.find(key); pos != data.end()) {
     return pos->second;
   } else {
     return nullptr;
   }
 }
 
-void* unsafeGetFakeContext(const TensorBase& fake, DispatchKey key) {
-  auto& ctx = detail::getFakeTensorImpl(fake)->dispatch_context;
+void* FakeTensor::unsafeGetData(DispatchKey key) const {
+  auto& data = impl_->dispatch_data;
 
-  if (auto pos = ctx.find(key); pos != ctx.end()) {
+  if (auto pos = data.find(key); pos != data.end()) {
     return pos->second.get();
   } else {
     return nullptr;
   }
+}
+
+FakeTensor asFake(const at::TensorBase& tensor) {
+  return FakeTensor{tensor};
+}
+
+FakeTensor unsafeAsFake(const at::TensorBase& tensor) noexcept {
+  return FakeTensor{tensor, /*unsafe = */ true};
 }
 
 }  // namespace torchdistx

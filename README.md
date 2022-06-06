@@ -188,9 +188,10 @@ $ cmake -GNinja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -B build
 ## Getting Started
 
 ### Fake Tensor
-In the example below we construct two fake tensors with the `fake_mode` context
-manager. Fake tensors pretend to be real tensors, but they don't allocate any
-storage. Internally they rely on the meta backend similar to meta tensors.
+Fake tensors, similar to meta tensors, carry no data; however, unlike meta
+tensors which report `meta` as their device, fake tensors act as if they were
+allocated on a real device. In the example below we construct two fake tensors
+with the `fake_mode` context manager.
 
 ```python
 >>> import torch
