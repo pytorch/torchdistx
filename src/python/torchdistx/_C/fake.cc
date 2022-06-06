@@ -18,6 +18,10 @@ void initFakeFunctions(pybind11::module& m) {
   m.def("is_fake", [](const at::Tensor& tensor) {
     return isFake(tensor);  // cast to `TensorBase`.
   });
+
+  m.def("meta_like", [](const at::Tensor& fake) {
+    return FakeTensor{fake}.toMeta();
+  });
 }
 
 }  // namespace torchdistx::python

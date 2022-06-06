@@ -36,11 +36,16 @@ mostly the same tradeoffs as meta tensors.
 
 API
 ---
-The API consists solely of a single ``fake_mode()`` function that acts as a
-Python context manager. Any tensor constructed within its scope will be forced
-to be fake.
+The API consists mainly of the ``fake_mode()`` function that acts as a Python
+context manager. Any tensor constructed within its scope will be forced to be
+fake.
 
 .. autofunction:: fake_mode
+
+There are also two convenience functions offered as part of the API:
+
+.. autofunction:: is_fake
+.. autofunction:: meta_like
 
 Use Cases
 ---------

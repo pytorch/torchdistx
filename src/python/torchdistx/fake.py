@@ -51,5 +51,26 @@ def fake_mode() -> Iterator[None]:
 
 
 def is_fake(tensor: torch.Tensor) -> bool:
-    """Indicates whether ``tensor`` is fake."""
+    """Indicates whether ``tensor`` is fake.
+
+    Args:
+        tensor:
+            The tensor to check.
+    """
     return _C.is_fake(tensor)
+
+
+def meta_like(fake: torch.Tensor) -> torch.Tensor:
+    """Returns a meta tensor with the same properties as ``fake``.
+
+    This function has the same Autograd behavior as ``detach()`` meaning the
+    returned tensor won't be part of the Autograd graph.
+
+    Args:
+        fake:
+            The fake tensor to copy from.
+    """
+    try:
+        return _C.meta_like(fake)
+    except ValueError:
+        raise ValueError("`fake` was expected to be a fake tensor.")
