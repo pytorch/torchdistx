@@ -15,6 +15,7 @@
 
 namespace at {
 
+class Tensor;
 class TensorBase;
 
 }  // namespace at
@@ -38,6 +39,9 @@ class TDX_API FakeTensor {
   explicit FakeTensor(const at::TensorBase& tensor, bool unsafe = false);
 
  public:
+  // Returns a meta tensor with the same properties.
+  at::Tensor toMeta() const;
+
   void setData(at::DispatchKey key, std::shared_ptr<void> data);
 
   bool hasData(at::DispatchKey key) const noexcept;

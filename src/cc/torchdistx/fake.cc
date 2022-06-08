@@ -566,12 +566,22 @@ bool isFake(const TensorBase& tensor) noexcept {
 FakeTensor::FakeTensor(const TensorBase& tensor, bool unsafe)
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     : impl_{static_cast<detail::FakeTensorImpl*>(tensor.unsafeGetTensorImpl())} {
-  TORCH_CHECK(unsafe || isFake(tensor),
+  TORCH_CHECK_VALUE(unsafe || isFake(tensor),
       "`tensor` was expected to be a fake tensor.");
 }
 
 const Storage& FakeTensor::meta_storage() const noexcept {
   return impl_->meta_impl()->storage();
+}
+
+at::Tensor FakeTensor::toMeta() const {
+  auto meta_impl = impl_->meta_impl()->shallow_copy_and_detach(
+      /*version_counter=*/0,
+      /*allow_tensor_metadata_change=*/false);
+
+  meta_impl->set_autograd_meta(nullptr);
+
+  return Tensor{meta_impl};
 }
 
 void FakeTensor::setData(DispatchKey key, std::shared_ptr<void> data) {
@@ -610,6 +620,7 @@ FakeTensor asFake(const at::TensorBase& tensor) {
   return FakeTensor{tensor};
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 FakeTensor unsafeAsFake(const at::TensorBase& tensor) noexcept {
   return FakeTensor{tensor, /*unsafe = */ true};
 }
