@@ -28,6 +28,12 @@ def deferred_init(module_fn: Callable[..., Module], *args, **kwargs) -> Module:
             ``Module`` instance.
         args, kwargs:
             The positional and keyword arguments to be passed to ``module_fn``.
+
+    .. Warning::
+        The operations performed on the parameters and buffers of a module will
+        only be recorded while inside ``deferred_init()``. Avoid making changes
+        to a module after its returned from ``deferred_init()``; otherwise it
+        cannot be correctly materialized.
     """
     _C.enable_deferred_init(True)
     try:
@@ -42,6 +48,11 @@ def materialize_tensor(tensor: Tensor) -> Tensor:
     Args:
         tensor:
             The tensor instance to materialize.
+
+    .. Warning::
+        Once materialized a fake tensor will hold a reference to its
+        materialized version. In order to avoid memory leaks make sure to
+        dispose it when it is no longer required.
     """
     return _C.materialize_tensor(tensor)
 
