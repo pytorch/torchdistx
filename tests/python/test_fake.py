@@ -7,7 +7,7 @@
 import pytest
 import torch
 
-from torchdistx.fake import fake_mode, meta_like
+from torchdistx.fake import fake_mode, is_fake, meta_like
 
 
 def test_meta_like_works_as_expected():
@@ -16,6 +16,7 @@ def test_meta_like_works_as_expected():
 
     b = meta_like(a)
 
+    assert not is_fake(b)
     assert b.device.type == "meta"
     assert b.dtype == a.dtype
     assert b.size() == a.size()
