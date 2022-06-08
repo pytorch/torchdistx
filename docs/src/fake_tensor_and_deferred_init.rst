@@ -72,7 +72,7 @@ device-specific logic:
 ::
 
     def foo(self, device: Device) -> Tensor:
-        a = torch.ones([3], device=device)
+        a = torch.ones([1], device=device)
 
         return a if a.is_cuda else a + 1
 
