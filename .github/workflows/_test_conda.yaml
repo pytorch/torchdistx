@@ -76,7 +76,7 @@ jobs:
         env:
           SANITIZER: ${{ matrix.sanitizer }}
         run: |
-          conda run --name test --live-stream env LD_PRELOAD=$SANITIZER_LIBRARY pytest tests
+          conda run --name test env LD_PRELOAD=$SANITIZER_LIBRARY pytest tests
 
           # Unfortunately Python leaks quite a bit of memory, so we cannot rely
           # on the output of LSan. Instead we use a rudimentary way to find out
