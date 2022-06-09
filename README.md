@@ -39,34 +39,34 @@ command in a Conda environment will install torchdistX and all its dependencies.
 
 For PyTorch CPU:
 ```
-$ conda install -c pytorch -c conda-forge torchdistx cpuonly
+conda install -c pytorch -c conda-forge torchdistx cpuonly
 ```
 
 For PyTorch with CUDA 10.2:
 ```
-$ conda install -c pytorch -c conda-forge torchdistx cudatoolkit=10.2
+conda install -c pytorch -c conda-forge torchdistx cudatoolkit=10.2
 ```
 
 For PyTorch with CUDA 11.3:
 ```
-$ conda install -c pytorch -c conda-forge torchdistx cudatoolkit=11.3
+conda install -c pytorch -c conda-forge torchdistx cudatoolkit=11.3
 ```
 
 **Nightly**
 
 For PyTorch CPU
 ```
-$ conda install -c pytorch-nightly -c conda-forge torchdistx cpuonly
+conda install -c pytorch-nightly -c conda-forge torchdistx cpuonly
 ```
 
 For PyTorch with CUDA 10.2
 ```
-$ conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=10.2
+conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=10.2
 ```
 
 For PyTorch with CUDA 11.3
 ```
-$ conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=11.3
+conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=11.3
 ```
 
 In fact torchdistX offers several Conda packages that you can install
@@ -123,13 +123,13 @@ pip install torchdistx --pre --extra-index-url https://download.pytorch.org/whl/
 - Create a Python virtual environment and install the build dependencies:
  ```
 # Build against PyTorch CPU
-$ pip install --upgrade -r requirements.txt -r use-cpu.txt
+pip install --upgrade -r requirements.txt -r use-cpu.txt
 
 # Build against PyTorch with CUDA 10.2
-$ pip install --upgrade -r requirements.txt -r use-cu102.txt
+pip install --upgrade -r requirements.txt -r use-cu102.txt
 
 # Build against PyTorch with CUDA 11.3
-$ pip install --upgrade -r requirements.txt -r use-cu113.txt
+pip install --upgrade -r requirements.txt -r use-cu113.txt
 ```
 - The build process requires CMake 3.21 or later. You can install an up-to-date
   version by executing `pip install cmake`. For other environments please refer
@@ -139,9 +139,9 @@ Once you have all prerequisites run the following commands to install the
 torchdistX Python package:
 
 ```
-$ cmake -DTORCHDIST_INSTALL_STANDALONE=ON -B build
-$ cmake --build build
-$ pip install .
+cmake -DTORCHDIST_INSTALL_STANDALONE=ON -B build
+cmake --build build
+pip install .
 ```
 
 For advanced build options you can check out [CMakeLists.txt](./CMakeLists.txt).
@@ -151,9 +151,9 @@ In case you would like to contribute to the project you can slightly modify the
 commands listed above:
 
 ```
-$ cmake -B build
-$ cmake --build build
-$ pip install -e .
+cmake -B build
+cmake --build build
+pip install -e .
 ```
 
 With `pip install -e .` you enable the edit mode (a.k.a. develop mode) that
@@ -167,13 +167,13 @@ to set up a Python virtual environment for development.
 
 ```
 # Build against PyTorch CPU
-$ pip install --upgrade -r requirements-devel.txt -r use-cpu.txt
+pip install --upgrade -r requirements-devel.txt -r use-cpu.txt
 
 # Build against PyTorch with CUDA 10.2
-$ pip install --upgrade -r requirements-devel.txt -r use-cu102.txt
+pip install --upgrade -r requirements-devel.txt -r use-cu102.txt
 
 # Build against PyTorch with CUDA 11.3
-$ pip install --upgrade -r requirements-devel.txt -r use-cu113.txt
+pip install --upgrade -r requirements-devel.txt -r use-cu113.txt
 ```
 
 #### Tip
@@ -182,7 +182,7 @@ speed up your build times. To use them you can replace the initial CMake command
 listed above with the following version:
 
 ```
-$ cmake -GNinja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -B build
+cmake -GNinja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -B build
 ```
 
 ## Getting Started
