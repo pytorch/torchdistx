@@ -241,6 +241,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../../fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../deferred_init.html">Deferred Module Initialization</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../fake_tensor_and_deferred_init.html">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
 
             
           
@@ -363,9 +367,30 @@
         <span class="n">_C</span><span class="o">.</span><span class="n">enable_fake_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">is_fake</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Indicates whether ``tensor`` is fake.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_C</span><span class="o">.</span><span class="n">is_fake</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+<div class="viewcode-block" id="is_fake"><a class="viewcode-back" href="../../fake_tensor.html#torchdistx.fake.is_fake">[docs]</a><span class="k">def</span> <span class="nf">is_fake</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Indicates whether ``tensor`` is fake.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tensor:</span>
+<span class="sd">            The tensor to check.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_C</span><span class="o">.</span><span class="n">is_fake</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="meta_like"><a class="viewcode-back" href="../../fake_tensor.html#torchdistx.fake.meta_like">[docs]</a><span class="k">def</span> <span class="nf">meta_like</span><span class="p">(</span><span class="n">fake</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns a meta tensor with the same properties as ``fake``.</span>
+
+<span class="sd">    This function has the same Autograd behavior as ``detach()`` meaning the</span>
+<span class="sd">    returned tensor won&#39;t be part of the Autograd graph.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fake:</span>
+<span class="sd">            The fake tensor to copy from.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_C</span><span class="o">.</span><span class="n">meta_like</span><span class="p">(</span><span class="n">fake</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`fake` was expected to be a fake tensor.&quot;</span><span class="p">)</span></div>
 </pre></div>
 
              </article>

@@ -241,6 +241,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../../fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../deferred_init.html">Deferred Module Initialization</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../fake_tensor_and_deferred_init.html">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
 
             
           
@@ -341,6 +345,12 @@
 <span class="sd">            ``Module`` instance.</span>
 <span class="sd">        args, kwargs:</span>
 <span class="sd">            The positional and keyword arguments to be passed to ``module_fn``.</span>
+
+<span class="sd">    .. Warning::</span>
+<span class="sd">        The operations performed on the parameters and buffers of a module will</span>
+<span class="sd">        only be recorded while inside ``deferred_init()``. Avoid making changes</span>
+<span class="sd">        to a module after its returned from ``deferred_init()``; otherwise it</span>
+<span class="sd">        cannot be correctly materialized.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">_C</span><span class="o">.</span><span class="n">enable_deferred_init</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -355,6 +365,11 @@
 <span class="sd">    Args:</span>
 <span class="sd">        tensor:</span>
 <span class="sd">            The tensor instance to materialize.</span>
+
+<span class="sd">    .. Warning::</span>
+<span class="sd">        Once materialized a fake tensor will hold a reference to its</span>
+<span class="sd">        materialized version. In order to avoid memory leaks make sure to</span>
+<span class="sd">        dispose it when it is no longer required.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">_C</span><span class="o">.</span><span class="n">materialize_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span></div>
 

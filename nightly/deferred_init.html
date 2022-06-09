@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Fake Tensors &amp; Deferred Module Initialization" href="fake_tensor_and_deferred_init.html" />
     <link rel="prev" title="Fake Tensor" href="fake_tensor.html" />
   <!-- Google Analytics -->
   
@@ -243,6 +244,10 @@
 <li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Deferred Module Initialization</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fake_tensor_and_deferred_init.html">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
 
             
           
@@ -383,6 +388,13 @@ the <a class="reference internal" href="#torchdistx.deferred_init.materialize_te
 <dd class="field-even"><p>torch.nn.modules.module.Module</p>
 </dd>
 </dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The operations performed on the parameters and buffers of a module will
+only be recorded while inside <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code>. Avoid making changes
+to a module after its returned from <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code>; otherwise it
+cannot be correctly materialized.</p>
+</div>
 </dd></dl>
 
 <div class="admonition note">
@@ -431,6 +443,12 @@ boolean value indicating whether to materialize it.</p></li>
 <dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.11.0)">torch.Tensor</a></p>
 </dd>
 </dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Once materialized a fake tensor will hold a reference to its
+materialized version. In order to avoid memory leaks make sure to
+dispose it when it is no longer required.</p>
+</div>
 </dd></dl>
 
 </section>
@@ -571,6 +589,8 @@ with the PyTorch core team to mitigate it in future releases.</p>
             <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fake_tensor_and_deferred_init.html" class="btn btn-neutral float-right" title="Fake Tensors &amp; Deferred Module Initialization" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
         <a href="fake_tensor.html" class="btn btn-neutral" title="Fake Tensor" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>

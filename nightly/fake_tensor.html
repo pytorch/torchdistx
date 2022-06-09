@@ -244,6 +244,10 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fake_tensor_and_deferred_init.html">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
 
             
           
@@ -348,9 +352,9 @@ Fake tensors are just an alternative interface to the meta backend and have
 mostly the same tradeoffs as meta tensors.</p>
 <section id="api">
 <h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
-<p>The API consists solely of a single <code class="docutils literal notranslate"><span class="pre">fake_mode()</span></code> function that acts as a
-Python context manager. Any tensor constructed within its scope will be forced
-to be fake.</p>
+<p>The API consists mainly of the <code class="docutils literal notranslate"><span class="pre">fake_mode()</span></code> function that acts as a Python
+context manager. Any tensor constructed within its scope will be forced to be
+fake.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="torchdistx.fake.fake_mode">
 <span class="sig-prename descclassname"><span class="pre">torchdistx.fake.</span></span><span class="sig-name descname"><span class="pre">fake_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/fake.html#fake_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.fake.fake_mode" title="Permalink to this definition">¶</a></dt>
@@ -358,6 +362,37 @@ to be fake.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>Iterator[None]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>There are also two convenience functions offered as part of the API:</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdistx.fake.is_fake">
+<span class="sig-prename descclassname"><span class="pre">torchdistx.fake.</span></span><span class="sig-name descname"><span class="pre">is_fake</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/fake.html#is_fake"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.fake.is_fake" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates whether <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is fake.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tensor</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.11.0)"><em>torch.Tensor</em></a>) – The tensor to check.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdistx.fake.meta_like">
+<span class="sig-prename descclassname"><span class="pre">torchdistx.fake.</span></span><span class="sig-name descname"><span class="pre">meta_like</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fake</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/fake.html#meta_like"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.fake.meta_like" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a meta tensor with the same properties as <code class="docutils literal notranslate"><span class="pre">fake</span></code>.</p>
+<p>This function has the same Autograd behavior as <code class="docutils literal notranslate"><span class="pre">detach()</span></code> meaning the
+returned tensor won’t be part of the Autograd graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fake</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.11.0)"><em>torch.Tensor</em></a>) – The fake tensor to copy from.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.11.0)">torch.Tensor</a></p>
 </dd>
 </dl>
 </dd></dl>

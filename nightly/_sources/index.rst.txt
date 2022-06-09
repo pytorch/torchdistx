@@ -33,3 +33,9 @@ Documentation
 
    fake_tensor
    deferred_init
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Design Notes
+
+   fake_tensor_and_deferred_init

@@ -1,0 +1,797 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Fake Tensors &amp; Deferred Module Initialization &mdash; torchdistX 0.2.0.dev0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Deferred Module Initialization" href="deferred_init.html" />
+  <!-- Google Analytics -->
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-117752657-2');
+    </script>
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  0.2.0.dev0
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Torch Distributed Experimental</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>Fake Tensors &amp; Deferred Module Initialization</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/fake_tensor_and_deferred_init.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <section id="fake-tensors-deferred-module-initialization">
+<h1>Fake Tensors &amp; Deferred Module Initialization<a class="headerlink" href="#fake-tensors-deferred-module-initialization" title="Permalink to this headline">¶</a></h1>
+<p>This design note assumes that you have already read the documentation of
+<a class="reference internal" href="deferred_init.html"><span class="doc">Deferred Module Initialization</span></a> and <a class="reference internal" href="fake_tensor.html"><span class="doc">Fake Tensor</span></a>. In addition you are expected to be
+familiar with the c10 and ATen libraries of PyTorch.</p>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Deferred Module Initialization essentially relies on two new dispatch keys:
+<code class="docutils literal notranslate"><span class="pre">Fake</span></code> and <code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Fake</span></code>, which will be described in detail below, is a post-autograd dispatch
+key and introduces the concept of a fake tensor. Although implemented as part of
+this work, it is not necessarily bound to Deferred Module Initialization and can
+be used independently. On the other hand <code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code>, a pre-autograd
+dispatch key, is specifically implemented for Deferred Module Initialization. It
+leverages the fake tensors to skip memory allocations and at the same time
+records the operations performed on those tensors in an in-memory graph. In a
+sense it is a lightweight symbolic tracer built on top of fake tensors.</p>
+</section>
+<section id="fake-tensors">
+<h2>Fake Tensors<a class="headerlink" href="#fake-tensors" title="Permalink to this headline">¶</a></h2>
+<p>Before diving into the technical details of the <code class="docutils literal notranslate"><span class="pre">Fake</span></code> dispatch key and the
+fake tensors, first the motivation of why the are needed.</p>
+<section id="problem-with-meta-tensors">
+<h3>Problem with Meta Tensors<a class="headerlink" href="#problem-with-meta-tensors" title="Permalink to this headline">¶</a></h3>
+<p>A naive implementation of <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code> could intercept the tensor factory
+operations and replace all <code class="docutils literal notranslate"><span class="pre">device</span></code> arguments with the meta device to force
+tensors to be allocated on the meta backend. Although this approach would work
+fairly well if our goal was to solely skip initialization instead of deferring
+it, there is one major problem with it once materialization comes into play.
+See the following simple code snippet:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">MyModule</span><span class="p">(</span><span class="n">Module</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">buf1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">buf2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Assuming we construct <code class="docutils literal notranslate"><span class="pre">MyModule</span></code> inside the scope of a <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code>
+call with the aforementioned naive approach, both <code class="docutils literal notranslate"><span class="pre">buf1</span></code> and <code class="docutils literal notranslate"><span class="pre">buf2</span></code> will be
+successfully allocated on the meta device as expected. However when we attempt
+to materialize them, we will hit the problem:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">materialize_tensor</span><span class="p">(</span><span class="n">my_module</span><span class="o">.</span><span class="n">buf1</span><span class="p">)</span>
+<span class="go">tensor([1., 1., 1.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">materialize_tensor</span><span class="p">(</span><span class="n">my_module</span><span class="o">.</span><span class="n">buf2</span><span class="p">)</span>
+<span class="go">tensor(..., device=&#39;meta&#39;)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">buf1</span></code> will be successfully materialized on CPU, however <code class="docutils literal notranslate"><span class="pre">buf2</span></code> will remain
+on the meta device. The problem is that the implementation of
+<code class="docutils literal notranslate"><span class="pre">torch.zero_like()</span></code> looks effectively like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">zeros_like</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This means when we record the operation in our internal graph the <code class="docutils literal notranslate"><span class="pre">device</span></code>
+argument that we capture for <code class="docutils literal notranslate"><span class="pre">buf2</span></code> will be <code class="docutils literal notranslate"><span class="pre">Meta</span></code>, not <code class="docutils literal notranslate"><span class="pre">CPU</span></code>.</p>
+<p>Another similar problem happens if the module initialization has some
+device-specific logic:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">Device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">a</span> <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">is_cuda</span> <span class="k">else</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>With the naive approach the materialized version of <code class="docutils literal notranslate"><span class="pre">a</span></code> will always contain
+<code class="docutils literal notranslate"><span class="pre">[2.,</span> <span class="pre">2.,</span> <span class="pre">2.]</span></code> even if the specified real <code class="docutils literal notranslate"><span class="pre">device</span></code> was <code class="docutils literal notranslate"><span class="pre">CUDA</span></code>. This is
+because <code class="docutils literal notranslate"><span class="pre">a</span></code> will always be allocated on the meta device and <code class="docutils literal notranslate"><span class="pre">is_cuda</span></code> will
+never return <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<p>In summary in order for materialization to work properly we need a more
+sophisticated approach and this is where the <code class="docutils literal notranslate"><span class="pre">Fake</span></code> dispatch key and the fake
+tensor (i.e. <code class="docutils literal notranslate"><span class="pre">FakeTensorImpl</span></code>) come into play.</p>
+</section>
+<section id="solution">
+<h3>Solution<a class="headerlink" href="#solution" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">FakeTensorImpl</span></code> is a subclass of <code class="docutils literal notranslate"><span class="pre">TensorImpl</span></code> and behaves very similar to
+<code class="docutils literal notranslate"><span class="pre">OpaqueTensorImpl</span></code> meaning, although it is associated with a real device, it
+has no storage allocated to it. However unlike <code class="docutils literal notranslate"><span class="pre">OpaqueTensorImpl</span></code> it also
+holds an internal <code class="docutils literal notranslate"><span class="pre">TensorImpl</span></code> that is allocated on the meta backend that acts
+as a “shadow” of the actual tensor.</p>
+<a class="reference internal image-reference" href="_images/fake-tensor.png"><img alt="FakeTensorImpl" class="align-center" src="_images/fake-tensor.png" style="width: 411.0px; height: 303.0px;" /></a>
+<p>The <code class="docutils literal notranslate"><span class="pre">Fake</span></code> dispatch key sits in-between Autograd and backend keys where its
+fallback (i.e. catch-all) handler replaces any fake tensor that is passed as an
+argument with its shadow meta tensor and forwards the operation to the meta
+backend. Once the meta backend call returns, it performs the reverse and
+replaces any shadow meta tensor with its fake tensor. Effectively dispatch keys
+above <code class="docutils literal notranslate"><span class="pre">Fake</span></code> such as Autograd see fake tensor arguments as regular real
+tensors while dispatch keys below it see them as meta tensors.</p>
+<a class="reference internal image-reference" href="_images/fake-tensor-dispatch.png"><img alt="Fake Tensor Dispatch" class="align-center" src="_images/fake-tensor-dispatch.png" style="width: 235.0px; height: 475.0px;" /></a>
+</section>
+<section id="shortcomings">
+<h3>Shortcomings<a class="headerlink" href="#shortcomings" title="Permalink to this headline">¶</a></h3>
+<p>Since internally fake tensors use the meta backend, they have the same
+shortcoming as regular meta tensors. If an operator has no support for the meta
+backend, it will fail in a similar way for a fake tensor as well.</p>
+<p>Another shortcoming that is unique to fake tensors is the support for
+mixed-device operators. Since the <code class="docutils literal notranslate"><span class="pre">Fake</span></code> handler never dispatches to the
+actual backend, we determine the output tensor(s) of an operator using the
+following logic:</p>
+<ol class="arabic simple">
+<li><p>If the operator has a <code class="docutils literal notranslate"><span class="pre">BackendSelect</span></code> kernel and a <code class="docutils literal notranslate"><span class="pre">device</span></code> argument, we
+consider the <code class="docutils literal notranslate"><span class="pre">device</span></code> argument the device of the output tensor(s).</p></li>
+<li><p>Otherwise; if a <code class="docutils literal notranslate"><span class="pre">TensorOptions</span></code> can be extracted from the arguments of the
+operator, its <code class="docutils literal notranslate"><span class="pre">device</span></code> is considered the output of the tensor(s).</p></li>
+<li><p>Otherwise; we consider the device of the first tensor in the arguments (or
+the first element if the argument is a tensor list) as the output of the
+tensor(s).</p></li>
+<li><p>If none of the above is available, we default to CPU.</p></li>
+</ol>
+<p>Although we are not aware of any native PyTorch operator that contradicts with
+this logic, it is still a heuristic and can pick the wrong device for an
+unconventional operator. In the future we consider improving this implementation
+by leveraging some form of tagging mechanism.</p>
+</section>
+</section>
+<section id="deferred-module-initialization">
+<h2>Deferred Module Initialization<a class="headerlink" href="#deferred-module-initialization" title="Permalink to this headline">¶</a></h2>
+<p>The second dispatch key, <code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code>, is where the core logic of Deferred
+Module Initialization lies. The operations performed on tensors are recorded
+to a lightweight in-memory graph inside the fallback (i.e. catch-all) handler of
+<code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code>. In addition to recording operations, the handler also ensures
+that tensor factory operations are diverted to the <code class="docutils literal notranslate"><span class="pre">Fake</span></code> handler by
+modifying the <code class="docutils literal notranslate"><span class="pre">DispatchKeySet</span></code> of the call. This way all tensors constructed
+within a <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code> call are forced to be fake.</p>
+<p>Although this simplified description gives the main intuition behind the
+<code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code> handler, there are two topics worth mentioning since they
+introduce some complexity to the overall implementation.</p>
+<section id="variable-methods">
+<h3>Variable Methods<a class="headerlink" href="#variable-methods" title="Permalink to this headline">¶</a></h3>
+<p>There are three main category of functions that construct and modify tensors in
+PyTorch: (1) conventional operators based on the dispatcher mechanism, (2) a
+small set of regular functions such as <code class="docutils literal notranslate"><span class="pre">torch.Tensor()</span></code>,
+<code class="docutils literal notranslate"><span class="pre">torch.from_numpy()</span></code>, or <code class="docutils literal notranslate"><span class="pre">torch.Tensor.numpy()</span></code> that are part of the Python
+API, but that don’t facilitate the dispatch mechanism, (3) and lastly
+<code class="docutils literal notranslate"><span class="pre">Variable</span></code> methods such as <code class="docutils literal notranslate"><span class="pre">torch.Tensor.set_data()</span></code> that, mostly due to
+historical reasons, leverage an alternative hook mechanism to separate Autograd
+implementation from the ATen library.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">DeferredInit</span></code> we are able to trace conventional operators as described
+above. The non-tracebility of regular functions is a pending (low-priority)
+work item that we plan to address in the future. The remaining category of
+<code class="docutils literal notranslate"><span class="pre">Variable</span></code> methods poses a problem though since there is no straightforward
+way to trace them, but they are essential for the materialization of tensors. In
+particular any read or write access to the <code class="docutils literal notranslate"><span class="pre">torch.Tensor.data</span></code> property in the
+Python API, which happens quite frequently with the use of
+<code class="docutils literal notranslate"><span class="pre">torch.nn.Parameter</span></code>, requires tracing of the <code class="docutils literal notranslate"><span class="pre">variable_data()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">set_data()</span></code> functions of the <code class="docutils literal notranslate"><span class="pre">Variable</span></code> interface.</p>
+<p>In order to be able to trace calls to the <code class="docutils literal notranslate"><span class="pre">Variable</span></code> interface, Deferred
+Module Initialization uses an additional mechanism beyond just having a
+dispatcher handler. As part of its prologue the <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code> call
+“hijacks” the global <code class="docutils literal notranslate"><span class="pre">VariableHooksInterface</span></code> instance that is exposed by
+Autograd. It wraps the instance with a proxy implementation of the interface
+that records the operations and then forwards them to the original instance.
+Technically this action is completely transparent to both Autograd and ATen. As
+part of its epilogue <code class="docutils literal notranslate"><span class="pre">deferred_init()</span></code> disposes its proxy and sets back the
+original instance as the global singleton.</p>
+<a class="reference internal image-reference" href="_images/variable-hooks.png"><img alt="Variable Hooks" class="align-center" src="_images/variable-hooks.png" style="width: 634.0px; height: 325.0px;" /></a>
+</section>
+<section id="mutable-tensors">
+<h3>Mutable Tensors<a class="headerlink" href="#mutable-tensors" title="Permalink to this headline">¶</a></h3>
+<p>Another complexity is introduced by the mutable nature of PyTorch tensors. This
+means our materialization logic cannot simply follow a chronological path
+through a unidirectional operation graph since operations performed later in
+time can still affect the output of earlier operations. Here a very simple
+example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span>
+<span class="go">tensor([3., 3., 3., 3.])</span>
+</pre></div>
+</div>
+<p>Although <code class="docutils literal notranslate"><span class="pre">a.add_()</span></code> happens later in time than <code class="docutils literal notranslate"><span class="pre">a.view()</span></code> the output of
+<code class="docutils literal notranslate"><span class="pre">b</span></code> is still affected by the in-place operation. In order to correctly handle
+this and many similar cases caused by the mutability of PyTorch tensors, we use
+a bidirectional graph that still offers a topological order.</p>
+</section>
+</section>
+</section>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="deferred_init.html" class="btn btn-neutral" title="Deferred Module Initialization" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright Meta Platforms, Inc. and affiliates.
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">Fake Tensors &amp; Deferred Module Initialization</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#fake-tensors">Fake Tensors</a><ul>
+<li><a class="reference internal" href="#problem-with-meta-tensors">Problem with Meta Tensors</a></li>
+<li><a class="reference internal" href="#solution">Solution</a></li>
+<li><a class="reference internal" href="#shortcomings">Shortcomings</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#deferred-module-initialization">Deferred Module Initialization</a><ul>
+<li><a class="reference internal" href="#variable-methods">Variable Methods</a></li>
+<li><a class="reference internal" href="#mutable-tensors">Mutable Tensors</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/doctools.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col follow-us-col">
+          <ul>
+            <li class="list-title">Stay Connected</li>
+          </ul>
+
+          <div class="footer-social-icons">
+            <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
+            <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
