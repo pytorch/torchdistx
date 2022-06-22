@@ -4,6 +4,6 @@ black==22.3.0
 flake8==4.0.1
 isort==5.10.1
 mypy==0.931
-numpy==1.21.5
+numpy==1.22
 pytest==7.0.1
 shellcheck-py==0.8.0.4
