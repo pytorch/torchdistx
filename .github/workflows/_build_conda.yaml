@@ -58,7 +58,7 @@ jobs:
           fi
 
           conda build $variants\
-                      --channel pytorch-nightly\
+                      --channel pytorch\
                       --channel conda-forge\
                       --output-folder ~/conda-build\
                       --no-include-recipe\
