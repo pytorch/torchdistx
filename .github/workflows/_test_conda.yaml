@@ -42,7 +42,7 @@ jobs:
                        --channel ~/conda-build\
                        --channel pytorch-nightly\
                        --channel conda-forge\
-                       numpy==1.21.5\
+                       numpy\
                        pytest==7.0.1\
                        python==${{ matrix.py }}\
                        torchdistx

@@ -15,7 +15,7 @@ function print_usage
 
 function exit_with_usage
 {
-    print_usage >&2 && exit 1
+    print_usage >&2 && exit 0
 }
 
 function exit_with_error

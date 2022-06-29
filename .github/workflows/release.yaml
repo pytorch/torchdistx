@@ -30,8 +30,8 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
-          build_variant: ['cpu', 'cu102', 'cu113'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
+          build_variant: ['cpu', 'cu102', 'cu113', 'cu116'],
           sanitizer: ['nosan'],
           include: [
             {
@@ -54,8 +54,8 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
-          build_variant: ['cpu', 'cu102', 'cu113'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
+          build_variant: ['cpu', 'cu102', 'cu113', 'cu116'],
           sanitizer: ['nosan'],
           include: [
             {
@@ -78,7 +78,7 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cpu'],
           sanitizer: ['nosan'],
           include: [
@@ -102,7 +102,7 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cu102'],
           sanitizer: ['nosan']
         }
@@ -114,8 +114,20 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cu113'],
+          sanitizer: ['nosan']
+        }
+
+  test_wheel_cu116:
+    name: Test (CUDA 11.6)
+    needs: test_wheel_cu113
+    uses: ./.github/workflows/_test_wheel.yaml
+    with:
+      matrix: |
+        {
+          py: ['3.7', '3.8', '3.9', '3.10'],
+          build_variant: ['cu116'],
           sanitizer: ['nosan']
         }
 
@@ -126,7 +138,7 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cpu'],
           sanitizer: ['nosan'],
           include: [
@@ -150,7 +162,7 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cu102'],
           sanitizer: ['nosan']
         }
@@ -162,21 +174,33 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
           build_variant: ['cu113'],
+          sanitizer: ['nosan']
+        }
+
+  test_conda_cu116:
+    name: Test (CUDA 11.6)
+    needs: test_conda_cu113
+    uses: ./.github/workflows/_test_conda.yaml
+    with:
+      matrix: |
+        {
+          py: ['3.7', '3.8', '3.9', '3.10'],
+          build_variant: ['cu116'],
           sanitizer: ['nosan']
         }
 
   deploy:
     name: Deploy
     if: github.event.inputs.deploy == 'true'
-    needs: [build_doc, test_wheel_cu113, test_conda_cu113]
+    needs: [build_doc, test_wheel_cu116, test_conda_cu116]
     uses: ./.github/workflows/_deploy.yaml
     with:
       matrix: |
         {
-          py: ['3.7', '3.8', '3.9'],
-          build_variant: ['cpu', 'cu102', 'cu113'],
+          py: ['3.7', '3.8', '3.9', '3.10'],
+          build_variant: ['cpu', 'cu102', 'cu113', 'cu116'],
         }
       s3_wheel_path: pytorch/whl
     secrets:

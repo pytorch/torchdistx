@@ -34,7 +34,7 @@ jobs:
       matrix: |
         {
           py: ['3.7'],
-          build_variant: ['cpu', 'cu102', 'cu113'],
+          build_variant: ['cpu', 'cu102', 'cu113', 'cu116'],
           sanitizer: ['nosan'],
           include: [
             {
@@ -89,6 +89,22 @@ jobs:
             {
               py: '3.7',
               build_variant: 'cu113',
+              sanitizer: 'nosan'
+            },
+          ]
+        }
+
+  test_wheel_cu116:
+    name: Test (CUDA 11.6)
+    needs: test_wheel_cu113
+    uses: ./.github/workflows/_test_wheel.yaml
+    with:
+      matrix: |
+        {
+          include: [
+            {
+              py: '3.7',
+              build_variant: 'cu116',
               sanitizer: 'nosan'
             },
           ]
