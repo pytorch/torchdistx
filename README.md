@@ -20,10 +20,11 @@ As of today the following features are available in torchdistX:
 ## Dependencies
 torchdistX versions corresponding to each PyTorch release:
 
-| `torch`      | `torchdistx` | `python`         |
-| ------------ | ------------ | ---------------- |
-| `main`       | `main`       | `>=3.7`, `<=3.9` |
-| `1.11.0`     | `0.1.0`      | `>=3.7`, `<=3.9` |
+| `torch`      | `torchdistx` | `python`          |
+| ------------ | ------------ | ----------------- |
+| `main`       | `main`       | `>=3.7`, `<=3.10` |
+| `1.12.0`     | `0.2.0`      | `>=3.7`, `<=3.10` |
+| `1.11.0`     | `0.1.0`      | `>=3.7`, `<=3.9`  |
 
 ## Installation
 As of today only Linux and macOS operating systems are supported. Please note

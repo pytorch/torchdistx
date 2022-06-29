@@ -41,7 +41,7 @@ jobs:
 
           source ~/venvs/test/bin/activate
 
-          pip install ~/wheelhouse/*.whl numpy==1.21.5\
+          pip install ~/wheelhouse/*.whl\
                       --requirement use-${{ matrix.build_variant }}.txt\
                       --requirement requirements-devel.txt\
                       --no-cache-dir
