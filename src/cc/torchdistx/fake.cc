@@ -491,7 +491,9 @@ bool FakeHandler::hasKernelForDispatchKey(DispatchKey key) const noexcept {
 
 void FakeHandler::convertMetaOutputsToFakeTensors() {
   auto fn = [this](Tensor& tensor) {
-    convertToFakeTensor(tensor);
+    if (tensor.is_meta()) {
+      convertToFakeTensor(tensor);
+    }
   };
 
   convertTensors(*stack_, handle_->schema().returns().size(), fn);
