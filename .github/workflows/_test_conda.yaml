@@ -40,7 +40,7 @@ jobs:
           conda create --yes\
                        --name test\
                        --channel ~/conda-build\
-                       --channel pytorch\
+                       --channel pytorch-nightly\
                        --channel conda-forge\
                        numpy\
                        pytest==7.0.1\
