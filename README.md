@@ -53,6 +53,11 @@ For PyTorch with CUDA 11.3:
 conda install -c pytorch -c conda-forge torchdistx cudatoolkit=11.3
 ```
 
+For PyTorch with CUDA 11.6:
+```
+conda install -c pytorch -c conda-forge torchdistx cudatoolkit=11.6
+```
+
 **Nightly**
 
 For PyTorch CPU
@@ -68,6 +73,11 @@ conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=10.2
 For PyTorch with CUDA 11.3
 ```
 conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=11.3
+```
+
+For PyTorch with CUDA 11.6
+```
+conda install -c pytorch-nightly -c conda-forge torchdistx cudatoolkit=11.6
 ```
 
 In fact torchdistX offers several Conda packages that you can install
@@ -99,6 +109,11 @@ For PyTorch with CUDA 11.3:
 pip install torchdistx --extra-index-url https://download.pytorch.org/whl/cu113
 ```
 
+For PyTorch with CUDA 11.6:
+```
+pip install torchdistx --extra-index-url https://download.pytorch.org/whl/cu116
+```
+
 **Nightly**
 
 For PyTorch CPU:
@@ -116,6 +131,11 @@ For PyTorch with CUDA 11.3:
 pip install torchdistx --pre --extra-index-url https://download.pytorch.org/whl/nightly/cu113
 ```
 
+For PyTorch with CUDA 11.6:
+```
+pip install torchdistx --pre --extra-index-url https://download.pytorch.org/whl/nightly/cu116
+```
+
 ### From Source
 
 #### Prerequisites
@@ -131,6 +151,9 @@ pip install --upgrade -r requirements.txt -r use-cu102.txt
 
 # Build against PyTorch with CUDA 11.3
 pip install --upgrade -r requirements.txt -r use-cu113.txt
+
+# Build against PyTorch with CUDA 11.6
+pip install --upgrade -r requirements.txt -r use-cu116.txt
 ```
 - The build process requires CMake 3.21 or later. You can install an up-to-date
   version by executing `pip install cmake`. For other environments please refer
@@ -175,6 +198,9 @@ pip install --upgrade -r requirements-devel.txt -r use-cu102.txt
 
 # Build against PyTorch with CUDA 11.3
 pip install --upgrade -r requirements-devel.txt -r use-cu113.txt
+
+# Build against PyTorch with CUDA 11.6
+pip install --upgrade -r requirements-devel.txt -r use-cu116.txt
 ```
 
 #### Tip
