@@ -97,7 +97,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # check that base optimizer's learning rate is stored in param_groups
         if not (self._base_optim.param_groups
                 and self._base_optim.param_groups[0]['lr']):
-            raise ValueError("Provided base optimizer does not have"
+            raise ValueError("Provided base optimizer does not have "
                              "parameters or learning rate specified.")
         self.param_groups = self._base_optim.param_groups
         self.base_lr = self.param_groups[0]['lr']
@@ -109,7 +109,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.slowmo_freq = slowmo_freq
 
         if slowmo_factor < 0.:
-            raise ValueError("Invalid ``slowmo_factor`` parameter,"
+            raise ValueError("Invalid ``slowmo_factor`` parameter, "
                              "must be non-negative.")
         self.slowmo_factor = slowmo_factor
 

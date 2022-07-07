@@ -78,7 +78,8 @@ class TestCommunicationHooks(FSDPTest):
     ):
 
         fsdp_net = self._init_one_layer_fsdp(sharding_strategy)
-        input = torch.tensor([self.rank]).float().to(self.rank)
+        inpt = torch.tensor([self.rank]).float()
+        inpt.to(self.rank)  # type: ignore[call-overload]
 
         slowMoState = slowMomentum_hook.SlowMoState(
             subgroup=None,
@@ -101,7 +102,7 @@ class TestCommunicationHooks(FSDPTest):
         fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
 
         fsdp_net.zero_grad()
-        loss = fsdp_net(input).sum()
+        loss = fsdp_net(inpt).sum()
         loss.backward()
 
         # Make sure grads were not reduced,
@@ -117,7 +118,8 @@ class TestCommunicationHooks(FSDPTest):
     ):
 
         fsdp_net = self._init_one_layer_fsdp(sharding_strategy)
-        input = torch.tensor([self.rank]).float().to(self.rank)
+        inpt = torch.tensor([self.rank]).float()
+        inpt.to(self.rank)  # type: ignore[call-overload]
 
         # create a subgroup equal to the whole WORLD
         cur_subgroup = dist.distributed_c10d._get_default_group()
@@ -131,7 +133,7 @@ class TestCommunicationHooks(FSDPTest):
 
         fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
         fsdp_net.zero_grad()
-        loss = fsdp_net(input).sum()
+        loss = fsdp_net(inpt).sum()
         loss.backward()
 
         # Make sure grads were not reduced, since `grad_sync` is set to False
@@ -168,7 +170,8 @@ class TestCommunicationHooks(FSDPTest):
             slowMoState,
             slowMomentum_hook.slowMo_hook
         )
-        inpt = torch.randn(7, 8).float().to(self.rank)
+        inpt = torch.randn(7, 8).float()
+        inpt.to(self.rank)  # type: ignore[call-overload]
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
             base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
@@ -229,7 +232,8 @@ class TestCommunicationHooks(FSDPTest):
             slowMoState,
             slowMomentum_hook.slowMo_hook
         )
-        inpt = torch.tensor([(self.rank + 1)] * 2).float().to(self.rank)
+        inpt = torch.tensor([(self.rank + 1)] * 2).float()
+        inpt.to(self.rank)  # type: ignore[call-overload]
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
             base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
@@ -285,7 +289,8 @@ class TestCommunicationHooks(FSDPTest):
             slowMoState,
             slowMomentum_hook.slowMo_hook
         )
-        inpt = torch.randn(7, 8).float().to(self.rank)
+        inpt = torch.randn(7, 8).float()
+        inpt.to(self.rank)  # type: ignore[call-overload]
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
             base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
@@ -349,7 +354,7 @@ class TestCommunicationHooks(FSDPTest):
     def test_slowmo_optimizer_warnings(self):
         net = torch.nn.Linear(1, 3, bias=False)
         with self.assertRaisesRegex(ValueError, "Base optimizer is a required"
-                                    "parameter."):
+                                    " parameter."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=None,
                 slowmo_freq=4,
@@ -358,7 +363,7 @@ class TestCommunicationHooks(FSDPTest):
             )
 
         with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_freq``"
-                                    "parameter, must be a positive value."):
+                                    " parameter, must be a positive value."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=-3,
@@ -367,7 +372,7 @@ class TestCommunicationHooks(FSDPTest):
             )
 
         with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_factor``"
-                                    "parameter, must be non-negative."):
+                                    " parameter, must be non-negative."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
