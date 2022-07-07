@@ -119,9 +119,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.slowmo_factor = slowmo_factor
 
         if slowmo_lr < 0.0:
-            raise ValueError(
-                "Invalid ``slowmo_lr`` parameter, must be non-negative."
-            )
+            raise ValueError("Invalid ``slowmo_lr`` parameter, must be non-negative.")
         self.slowmo_lr = slowmo_lr
 
         self.averager = averagers.PeriodicModelAverager(
