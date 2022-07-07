@@ -23,7 +23,8 @@ class SlowMoState(default.AllReduceState):
 
     def __init__(self, subgroup, grad_sync=False):
 
-        self.subgroup = subgroup if subgroup is not None else dist.new_subgroups()[0]
+        self.subgroup =\
+            subgroup if subgroup is not None else dist.new_subgroups()[0]
         super().__init__(self.subgroup)
         self.grad_sync = grad_sync
 
@@ -34,9 +35,11 @@ def slowMo_hook(state: SlowMoState, grad: torch.Tensor):
     reduces gradients between workers under the same node.
 
     Args:
-        state (SlowMoState): State information, configures if gradients are going to be
-            communicated or not, and subgoups for gradient communication
-        grad (torch.Tensor): A gradient for the local batch that needs to be communicated across ranks.
+        state (SlowMoState): State information, configures
+            if gradients are going to be communicated or not,
+            and subgoups for gradient communication
+        grad (torch.Tensor): A gradient for the local batch
+            that needs to be communicated across ranks.
     """
     if state.grad_sync:
         default.allreduce_hook(state, grad)

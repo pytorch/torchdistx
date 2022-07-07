@@ -19,7 +19,10 @@ from torch.testing._internal.common_utils import (
     run_tests,
 )
 
-from torchdistx.slow_momentum_fsdp import slowMomentum_hook, slowMomentum_optimizer
+from torchdistx.slow_momentum_fsdp import (
+    slowMomentum_hook,
+    slowMomentum_optimizer
+)
 
 if not dist.is_available():
     print("Distributed not available, skipping tests", file=sys.stderr)
@@ -80,14 +83,20 @@ class TestCommunicationHooks(FSDPTest):
         fsdp_net = self._init_one_layer_fsdp(sharding_strategy)
         input = torch.tensor([self.rank]).float().to(self.rank)
 
-        slowMoState = slowMomentum_hook.SlowMoState(subgroup=None, grad_sync=True)
+        slowMoState = slowMomentum_hook.SlowMoState(
+            subgroup=None,
+            grad_sync=True
+        )
         # check that a default subgroup was created,
         # for small scale experiments equal to `World_Size`
         self.assertEqual(slowMoState.subgroup.size(), dist.get_world_size())
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         self.assertEqual(cur_subgroup.size(), 1)
-        slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup, grad_sync=True)
+        slowMoState = slowMomentum_hook.SlowMoState(
+            cur_subgroup,
+            grad_sync=True
+        )
         # check that state has subgroup registered
         self.assertEqual(slowMoState.subgroup.size(), cur_subgroup.size())
         self.assertEqual(slowMoState.subgroup.rank(), 0)
@@ -98,7 +107,8 @@ class TestCommunicationHooks(FSDPTest):
         loss = fsdp_net(input).sum()
         loss.backward()
 
-        # Make sure grads were not reduced, since each subgroup is only one worker.
+        # Make sure grads were not reduced,
+        # since each subgroup is only one worker.
         # Gradient in this case is equal to rank
         self.assertEqual(fsdp_net.params[0].grad[0], self.rank)
 
@@ -115,7 +125,10 @@ class TestCommunicationHooks(FSDPTest):
         # create a subgroup equal to the whole WORLD
         cur_subgroup = dist.distributed_c10d._get_default_group()
         self.assertEqual(cur_subgroup.size(), dist.get_world_size())
-        slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup, grad_sync=False)
+        slowMoState = slowMomentum_hook.SlowMoState(
+            cur_subgroup,
+            grad_sync=False
+        )
         # check that state has subgroup registered
         self.assertEqual(slowMoState.subgroup.size(), cur_subgroup.size())
 
@@ -154,7 +167,10 @@ class TestCommunicationHooks(FSDPTest):
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
         fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
-        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
+        fsdp_net_slowmo.register_comm_hook(
+            slowMoState,
+            slowMomentum_hook.slowMo_hook
+        )
         inpt = torch.randn(7, 8).float().to(self.rank)
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
@@ -181,7 +197,10 @@ class TestCommunicationHooks(FSDPTest):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
             averager2.average_parameters(list(fsdp_net.parameters()))
 
-        for slowmo_params, net_params in zip(fsdp_net_slowmo.parameters(), fsdp_net.parameters()):
+        for slowmo_params, net_params in zip(
+            fsdp_net_slowmo.parameters(),
+            fsdp_net.parameters()
+        ):
             self.assertEqual(slowmo_params, net_params)
 
     @skip_if_lt_x_gpu(2)
@@ -205,8 +224,14 @@ class TestCommunicationHooks(FSDPTest):
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
-        fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
-        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
+        fsdp_net.register_comm_hook(
+            slowMoState,
+            slowMomentum_hook.slowMo_hook
+        )
+        fsdp_net_slowmo.register_comm_hook(
+            slowMoState,
+            slowMomentum_hook.slowMo_hook
+        )
         inpt = torch.tensor([(self.rank + 1)] * 2).float().to(self.rank)
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
@@ -222,7 +247,7 @@ class TestCommunicationHooks(FSDPTest):
         )
         base_optimizer = torch.optim.SGD(fsdp_net.parameters(), lr=1e-2)
 
-        for k, v in slowmo_optim.state.items():
+        for _, v in slowmo_optim.state.items():
             initial_prev_params = copy.deepcopy(v["prev_param"])
             initial_slow_momentum_buffer = copy.deepcopy(v["slow_momentum"])
 
@@ -259,7 +284,10 @@ class TestCommunicationHooks(FSDPTest):
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
-        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
+        fsdp_net_slowmo.register_comm_hook(
+            slowMoState,
+            slowMomentum_hook.slowMo_hook
+        )
         inpt = torch.randn(7, 8).float().to(self.rank)
 
         slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
@@ -321,13 +349,10 @@ class TestCommunicationHooks(FSDPTest):
         )
 
     @skip_if_lt_x_gpu(2)
-    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
-    def test_slowmo_optimizer_warnings(
-        self,
-        sharding_strategy: Optional[ShardingStrategy]
-    ):
+    def test_slowmo_optimizer_warnings(self):
         net = torch.nn.Linear(1, 3, bias=False)
-        with self.assertRaisesRegex(ValueError, "Base optimizer is a required parameter."):
+        with self.assertRaisesRegex(ValueError, "Base optimizer is a required"
+                                    "parameter."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=None,
                 slowmo_freq=4,
@@ -335,7 +360,8 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_freq`` parameter, must be a positive value."):
+        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_freq``"
+                                    "parameter, must be a positive value."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=-3,
@@ -343,7 +369,8 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_factor`` parameter, must be non-negative."):
+        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_factor``"
+                                    "parameter, must be non-negative."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
@@ -351,7 +378,8 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_lr`` parameter, must be non-negative."):
+        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_lr`` "
+                                    "parameter, must be non-negative."):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,

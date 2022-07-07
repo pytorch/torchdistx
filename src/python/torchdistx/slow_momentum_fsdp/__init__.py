@@ -4,5 +4,5 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from .slowMomentum_hook import SlowMoState, slowMo_hook
 from .slowMomentum_optimizer import SlowMomentumOptimizer
-from .slowMomentum_hook import slowMo_hook, SlowMoState
