@@ -7,3 +7,4 @@ mypy==0.931
 numpy
 pytest==7.0.1
 shellcheck-py==0.8.0.4
+expecttest==0.1.3
