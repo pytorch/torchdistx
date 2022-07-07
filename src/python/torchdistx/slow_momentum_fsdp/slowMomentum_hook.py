@@ -23,8 +23,7 @@ class SlowMoState(default.AllReduceState):
 
     def __init__(self, subgroup, grad_sync=False):
 
-        self.subgroup =\
-            subgroup if subgroup is not None else dist.new_subgroups()[0]
+        self.subgroup = subgroup if subgroup is not None else dist.new_subgroups()[0]
         super().__init__(self.subgroup)
         self.grad_sync = grad_sync
 

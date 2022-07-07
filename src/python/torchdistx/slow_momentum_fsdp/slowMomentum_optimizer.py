@@ -83,6 +83,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>     loss.backward()
         >>>     slowmo_optim.step()
     """
+
     def __init__(
         self,
         base_optim: torch.optim.Optimizer,
@@ -95,45 +96,48 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self._base_optim = base_optim
 
         # check that base optimizer's learning rate is stored in param_groups
-        if not (self._base_optim.param_groups
-                and self._base_optim.param_groups[0]['lr']):
-            raise ValueError("Provided base optimizer does not have "
-                             "parameters or learning rate specified.")
+        if not (
+            self._base_optim.param_groups and self._base_optim.param_groups[0]["lr"]
+        ):
+            raise ValueError(
+                "Provided base optimizer does not have "
+                "parameters or learning rate specified."
+            )
         self.param_groups = self._base_optim.param_groups
-        self.base_lr = self.param_groups[0]['lr']
+        self.base_lr = self.param_groups[0]["lr"]
 
         if slowmo_freq < 1:
-            raise ValueError("Invalid "
-                             "``slowmo_freq`` parameter, must be a "
-                             "positive value.")
+            raise ValueError(
+                "Invalid ``slowmo_freq`` parameter, must be a positive value."
+            )
         self.slowmo_freq = slowmo_freq
 
-        if slowmo_factor < 0.:
-            raise ValueError("Invalid ``slowmo_factor`` parameter, "
-                             "must be non-negative.")
+        if slowmo_factor < 0.0:
+            raise ValueError(
+                "Invalid ``slowmo_factor`` parameter, must be non-negative."
+            )
         self.slowmo_factor = slowmo_factor
 
-        if slowmo_lr < 0.:
-            raise ValueError("Invalid ``slowmo_lr`` parameter"
-                             ", must be non-negative.")
+        if slowmo_lr < 0.0:
+            raise ValueError(
+                "Invalid ``slowmo_lr`` parameter, must be non-negative."
+            )
         self.slowmo_lr = slowmo_lr
 
         self.averager = averagers.PeriodicModelAverager(
-            period=slowmo_freq,
-            warmup_steps=0
+            period=slowmo_freq, warmup_steps=0
         )
         self._init_slowmo_buffer()
 
     def _init_slowmo_buffer(self):
         for group in self.param_groups:
-            for param in group['params']:
+            for param in group["params"]:
                 # Initialize momentums and memorize initial parameters
                 self.state[param] = {
                     "slow_momentum": torch.zeros(
-                        param.data.shape,
-                        device=torch.cuda.current_device()
+                        param.data.shape, device=torch.cuda.current_device()
                     ),
-                    "prev_param": param.data.detach().clone()
+                    "prev_param": param.data.detach().clone(),
                 }
 
     @property
@@ -151,10 +155,10 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         `slowmo_factor`, `slowmo_lr`, and `step` for the model's averager.
         """
         optim_state_dict = self._base_optim.state_dict()
-        optim_state_dict['slowmo_freq'] = self.slowmo_freq
-        optim_state_dict['slowmo_factor'] = self.slowmo_factor
-        optim_state_dict['slowmo_lr'] = self.slowmo_lr
-        optim_state_dict['step'] = self.averager.step
+        optim_state_dict["slowmo_freq"] = self.slowmo_freq
+        optim_state_dict["slowmo_factor"] = self.slowmo_factor
+        optim_state_dict["slowmo_lr"] = self.slowmo_lr
+        optim_state_dict["step"] = self.averager.step
 
         return optim_state_dict
 
@@ -168,16 +172,17 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         buffers.
         """
         self._base_optim.load_state_dict(state_dict)
-        self.slowmo_freq = state_dict['slowmo_freq']
-        self.slowmo_factor = state_dict['slowmo_factor']
-        self.slowmo_lr = state_dict['slowmo_lr']
-        self.averager.period = state_dict['slowmo_freq']
-        self.averager.step = state_dict['step']
+        self.slowmo_freq = state_dict["slowmo_freq"]
+        self.slowmo_factor = state_dict["slowmo_factor"]
+        self.slowmo_lr = state_dict["slowmo_lr"]
+        self.averager.period = state_dict["slowmo_freq"]
+        self.averager.step = state_dict["step"]
         # check that base optimizer's learning rate is stored in param_groups
-        if not (self.param_groups and self.param_groups[0]['lr']):
-            raise ValueError("Base optimizer does not have parameters"
-                             "or learning rate specified.")
-        self.base_lr = self.param_groups[0]['lr']
+        if not (self.param_groups and self.param_groups[0]["lr"]):
+            raise ValueError(
+                "Base optimizer does not have parameters" "or learning rate specified."
+            )
+        self.base_lr = self.param_groups[0]["lr"]
         self._init_slowmo_buffer()
 
     def step(self):
@@ -191,18 +196,17 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.averager.average_parameters(params=self.param_groups)
         if self.averager.step % self.slowmo_freq == 0:
             for group in self.param_groups:
-                for param in group['params']:
+                for param in group["params"]:
                     # Update the slow momentum
                     p_state = self.state[param]
 
-                    p_state["slow_momentum"].mul_(self.slowmo_factor)\
-                        .sub_(param.data, alpha=1 / self.base_lr)\
-                        .add_(p_state["prev_param"], alpha=1 / self.base_lr)
+                    p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
+                        param.data, alpha=1 / self.base_lr
+                    ).add_(p_state["prev_param"], alpha=1 / self.base_lr)
 
                     # Update parameters
                     p_state["prev_param"].add_(
-                        p_state["slow_momentum"],
-                        alpha=-self.slowmo_lr * self.base_lr
+                        p_state["slow_momentum"], alpha=-self.slowmo_lr * self.base_lr
                     )
                     param.data.copy_(p_state["prev_param"])
 

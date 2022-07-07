@@ -27,7 +27,6 @@ if not dist.is_available():
 
 
 class Net(nn.Module):
-
     def __init__(self, has_wrapping, sharding_strategy):
         # to ensure determinism
         torch.manual_seed(0)
@@ -35,24 +34,21 @@ class Net(nn.Module):
         super().__init__()
 
         if has_wrapping:
-            self.net = FSDP(nn.Sequential(
-                nn.Linear(8, 16),
-                nn.ReLU(),
-                FSDP(
-                    nn.Linear(16, 8),
-                    device_id=torch.cuda.current_device(),
-                    sharding_strategy=sharding_strategy
-                )
-            ),
+            self.net = FSDP(
+                nn.Sequential(
+                    nn.Linear(8, 16),
+                    nn.ReLU(),
+                    FSDP(
+                        nn.Linear(16, 8),
+                        device_id=torch.cuda.current_device(),
+                        sharding_strategy=sharding_strategy,
+                    ),
+                ),
                 device_id=torch.cuda.current_device(),
-                sharding_strategy=sharding_strategy
+                sharding_strategy=sharding_strategy,
             )
         else:
-            self.net = nn.Sequential(
-                nn.Linear(8, 16),
-                nn.ReLU(),
-                nn.Linear(16, 8)
-            )
+            self.net = nn.Sequential(nn.Linear(8, 16), nn.ReLU(), nn.Linear(16, 8))
 
         self.out = nn.Linear(8, 4)
 
@@ -61,13 +57,12 @@ class Net(nn.Module):
 
 
 class TestCommunicationHooks(FSDPTest):
-
     def _init_one_layer_fsdp(self, sharding_strategy):
         net = torch.nn.Linear(1, 5, bias=False)
         return FSDP(
             net,
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
 
     @skip_if_lt_x_gpu(2)
@@ -81,20 +76,14 @@ class TestCommunicationHooks(FSDPTest):
         inpt = torch.tensor([self.rank]).float()
         inpt.to(self.rank)  # type: ignore[call-overload]
 
-        slowMoState = slowMomentum_hook.SlowMoState(
-            subgroup=None,
-            grad_sync=True
-        )
+        slowMoState = slowMomentum_hook.SlowMoState(subgroup=None, grad_sync=True)
         # check that a default subgroup was created,
         # for small scale experiments equal to `World_Size`
         self.assertEqual(slowMoState.subgroup.size(), dist.get_world_size())
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         self.assertEqual(cur_subgroup.size(), 1)
-        slowMoState = slowMomentum_hook.SlowMoState(
-            cur_subgroup,
-            grad_sync=True
-        )
+        slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup, grad_sync=True)
         # check that state has subgroup registered
         self.assertEqual(slowMoState.subgroup.size(), cur_subgroup.size())
         self.assertEqual(slowMoState.subgroup.rank(), 0)
@@ -124,10 +113,7 @@ class TestCommunicationHooks(FSDPTest):
         # create a subgroup equal to the whole WORLD
         cur_subgroup = dist.distributed_c10d._get_default_group()
         self.assertEqual(cur_subgroup.size(), dist.get_world_size())
-        slowMoState = slowMomentum_hook.SlowMoState(
-            cur_subgroup,
-            grad_sync=False
-        )
+        slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup, grad_sync=False)
         # check that state has subgroup registered
         self.assertEqual(slowMoState.subgroup.size(), cur_subgroup.size())
 
@@ -149,27 +135,23 @@ class TestCommunicationHooks(FSDPTest):
     @skip_if_lt_x_gpu(2)
     @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
     def test_slowmo_optimizer_averager(
-        self,
-        sharding_strategy: Optional[ShardingStrategy]
+        self, sharding_strategy: Optional[ShardingStrategy]
     ):
         fsdp_net = FSDP(
             Net(has_wrapping=True, sharding_strategy=sharding_strategy),
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
         fsdp_net_slowmo = FSDP(
             Net(has_wrapping=True, sharding_strategy=sharding_strategy),
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
         fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
-        fsdp_net_slowmo.register_comm_hook(
-            slowMoState,
-            slowMomentum_hook.slowMo_hook
-        )
+        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
         inpt = torch.randn(7, 8).float()
         inpt.to(self.rank)  # type: ignore[call-overload]
 
@@ -187,8 +169,7 @@ class TestCommunicationHooks(FSDPTest):
         slowmo_optim.averager.period = 3
 
         averager2 = averagers.PeriodicModelAverager(
-            period=3,
-            process_group=dist.distributed_c10d._get_default_group()
+            period=3, process_group=dist.distributed_c10d._get_default_group()
         )
         base_optimizer = torch.optim.SGD(fsdp_net.parameters(), lr=1e-2)
 
@@ -198,40 +179,32 @@ class TestCommunicationHooks(FSDPTest):
             averager2.average_parameters(list(fsdp_net.parameters()))
 
         for slowmo_params, net_params in zip(
-            fsdp_net_slowmo.parameters(),
-            fsdp_net.parameters()
+            fsdp_net_slowmo.parameters(), fsdp_net.parameters()
         ):
             self.assertEqual(slowmo_params, net_params)
 
     @skip_if_lt_x_gpu(2)
     @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
     def test_slowmo_optimizer_momentum_step(
-        self,
-        sharding_strategy: Optional[ShardingStrategy]
+        self, sharding_strategy: Optional[ShardingStrategy]
     ):
         net = torch.nn.Linear(2, 1)
 
         fsdp_net = FSDP(
             copy.deepcopy(net),
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
         fsdp_net_slowmo = FSDP(
             copy.deepcopy(net),
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
-        fsdp_net.register_comm_hook(
-            slowMoState,
-            slowMomentum_hook.slowMo_hook
-        )
-        fsdp_net_slowmo.register_comm_hook(
-            slowMoState,
-            slowMomentum_hook.slowMo_hook
-        )
+        fsdp_net.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
+        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
         inpt = torch.tensor([(self.rank + 1)] * 2).float()
         inpt.to(self.rank)  # type: ignore[call-overload]
 
@@ -243,8 +216,7 @@ class TestCommunicationHooks(FSDPTest):
         )
 
         averager2 = averagers.PeriodicModelAverager(
-            period=1,
-            process_group=dist.distributed_c10d._get_default_group()
+            period=1, process_group=dist.distributed_c10d._get_default_group()
         )
         base_optimizer = torch.optim.SGD(fsdp_net.parameters(), lr=1e-2)
 
@@ -262,8 +234,10 @@ class TestCommunicationHooks(FSDPTest):
         # can use them to calculate momentum update
         # momentum_(t+1) = slowmo_factor * momentum_t +
         #   (prev_param - cur_param)/base_lr
-        momentum = slowmo_optim.slowmo_factor * initial_slow_momentum_buffer\
+        momentum = (
+            slowmo_optim.slowmo_factor * initial_slow_momentum_buffer
             + (initial_prev_params - fsdp_net.params[0].data) / 0.01
+        )
 
         # parameter_(t+1) = prev_param - slowmo_lr * base_lr * momentum_(t+1)
         calculated_params = initial_prev_params - 0.1 * 0.01 * momentum
@@ -273,22 +247,18 @@ class TestCommunicationHooks(FSDPTest):
     @skip_if_lt_x_gpu(2)
     @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
     def test_slowmo_optimizer_state_dict(
-        self,
-        sharding_strategy: Optional[ShardingStrategy]
+        self, sharding_strategy: Optional[ShardingStrategy]
     ):
         chkpt = tempfile.gettempdir() + "/checkpoint.pt"
         fsdp_net_slowmo = FSDP(
             Net(has_wrapping=False, sharding_strategy=sharding_strategy),
             device_id=torch.cuda.current_device(),
-            sharding_strategy=sharding_strategy
+            sharding_strategy=sharding_strategy,
         ).to(self.rank)
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowMoState = slowMomentum_hook.SlowMoState(cur_subgroup)
-        fsdp_net_slowmo.register_comm_hook(
-            slowMoState,
-            slowMomentum_hook.slowMo_hook
-        )
+        fsdp_net_slowmo.register_comm_hook(slowMoState, slowMomentum_hook.slowMo_hook)
         inpt = torch.randn(7, 8).float()
         inpt.to(self.rank)  # type: ignore[call-overload]
 
@@ -302,14 +272,14 @@ class TestCommunicationHooks(FSDPTest):
         for _ in range(10):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
 
-        state = {'optim_state_dict': slowmo_optim.state_dict()}
+        state = {"optim_state_dict": slowmo_optim.state_dict()}
 
         if self.rank == 0:
             torch.save(state, chkpt)
 
         dist.barrier()
 
-        map_location = {'cuda:%d' % 0: 'cuda:%d' % self.rank}
+        map_location = {"cuda:%d" % 0: "cuda:%d" % self.rank}
         checkpoint = torch.load(chkpt, map_location=map_location)
 
         slowmo_optim_dummy = slowMomentum_optimizer.SlowMomentumOptimizer(
@@ -318,43 +288,29 @@ class TestCommunicationHooks(FSDPTest):
             slowmo_factor=3,
             slowmo_lr=4,
         )
-        slowmo_optim_dummy.load_state_dict(checkpoint['optim_state_dict'])
+        slowmo_optim_dummy.load_state_dict(checkpoint["optim_state_dict"])
         # make sure acerager's period and step were updated
         self.assertEqual(
-            slowmo_optim_dummy.averager.period,
-            slowmo_optim.averager.period
+            slowmo_optim_dummy.averager.period, slowmo_optim.averager.period
         )
-        self.assertEqual(
-            slowmo_optim_dummy.averager.step,
-            slowmo_optim.averager.step
-        )
+        self.assertEqual(slowmo_optim_dummy.averager.step, slowmo_optim.averager.step)
 
         # make sure slowmo parameters were updated
-        self.assertEqual(
-            slowmo_optim_dummy.slowmo_freq,
-            slowmo_optim.slowmo_freq
-        )
-        self.assertEqual(
-            slowmo_optim_dummy.slowmo_factor,
-            slowmo_optim.slowmo_factor
-        )
-        self.assertEqual(
-            slowmo_optim_dummy.slowmo_lr,
-            slowmo_optim.slowmo_lr
-        )
+        self.assertEqual(slowmo_optim_dummy.slowmo_freq, slowmo_optim.slowmo_freq)
+        self.assertEqual(slowmo_optim_dummy.slowmo_factor, slowmo_optim.slowmo_factor)
+        self.assertEqual(slowmo_optim_dummy.slowmo_lr, slowmo_optim.slowmo_lr)
 
         for _ in range(10):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim_dummy)
 
-        self.assertEqual(
-            slowmo_optim_dummy.averager.step, 20
-        )
+        self.assertEqual(slowmo_optim_dummy.averager.step, 20)
 
     @skip_if_lt_x_gpu(2)
     def test_slowmo_optimizer_warnings(self):
         net = torch.nn.Linear(1, 3, bias=False)
-        with self.assertRaisesRegex(ValueError, "Base optimizer is a required"
-                                    " parameter."):
+        with self.assertRaisesRegex(
+            ValueError, "Base optimizer is a required" " parameter."
+        ):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=None,
                 slowmo_freq=4,
@@ -362,8 +318,10 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_freq``"
-                                    " parameter, must be a positive value."):
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid ``slowmo_freq`` parameter, must be a positive value.",
+        ):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=-3,
@@ -371,8 +329,9 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_factor``"
-                                    " parameter, must be non-negative."):
+        with self.assertRaisesRegex(
+            ValueError, "Invalid ``slowmo_factor`` parameter, must be non-negative."
+        ):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
@@ -380,8 +339,9 @@ class TestCommunicationHooks(FSDPTest):
                 slowmo_lr=0.1,
             )
 
-        with self.assertRaisesRegex(ValueError, "Invalid ``slowmo_lr`` "
-                                    "parameter, must be non-negative."):
+        with self.assertRaisesRegex(
+            ValueError, "Invalid ``slowmo_lr`` parameter, must be non-negative."
+        ):
             slowmo_optim = slowMomentum_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
@@ -399,12 +359,9 @@ class TestCommunicationHooks(FSDPTest):
         for _, v in slowmo_optim.state.items():
             self.assertEqual(
                 v["slow_momentum"],
-                torch.zeros(size=(3, 1), device=torch.cuda.current_device())
+                torch.zeros(size=(3, 1), device=torch.cuda.current_device()),
             )
-            self.assertEqual(
-                v["prev_param"],
-                net.weight
-            )
+            self.assertEqual(v["prev_param"], net.weight)
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)
