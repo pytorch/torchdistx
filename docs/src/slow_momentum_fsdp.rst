@@ -1,4 +1,4 @@
-.. currentmodule:: torchdistx.slow_momentum_fsdp
+.. currentmodule:: torchdistx
 
 Slow Momentum for Fully Sharded Data Parallel training with ``NO_SHARD`` strategy
 ===================================================================================

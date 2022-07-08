@@ -19,7 +19,7 @@ from torch.testing._internal.common_utils import (
     run_tests,
 )
 
-from torchdistx.slow_momentum_fsdp import slowMomentum_hook, slowMomentum_optimizer
+from torchdistx import slowMomentum_hook, slowMomentum_optimizer
 
 if not dist.is_available():
     print("Distributed not available, skipping tests", file=sys.stderr)
