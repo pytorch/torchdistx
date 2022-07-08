@@ -18,6 +18,9 @@ package_path = "src/python"
 
 package_name = "torchdistx"
 
+# Specific to SlowMo
+subpackage_name = "torchdistx.slow_momentum"
+
 
 class Distribution(DistributionBase):
     # Since we are injecting our Python C extension into the package instead
@@ -166,7 +169,7 @@ def main() -> None:
         url="https://github.com/pytorch/torchdistx",
         license="BSD",
         keywords=["pytorch", "machine learning"],
-        packages=[package_name],
+        packages=[package_name, subpackage_name],
         package_dir={"": package_path},
         package_data={"": ["py.typed", "*.pyi"]},
         python_requires=">=3.7",

@@ -32,9 +32,9 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  from torch.distributed.fsdp import(
         >>>    FullyShardedDataParallel as FSDP
         >>>  )
-        >>>  from torchdistx.slow_momentum_fsdp import(
-        >>>     slowMomentum_hook,
-        >>>     slowMomentum_optimizer
+        >>>  from torchdistx.slow_momentum import(
+        >>>     slow_momentum_comm,
+        >>>     slow_momentum_optimizer
         >>>  )
         >>>
         >>>  net = torch.nn.Linear(4,10)
@@ -50,7 +50,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # To disable any communication between workers,
         >>>  # set `grad_sync` to `False`
         >>>  cur_subgroup, _ = dist.new_subgroups()
-        >>>  slowMoState = slow_momentum.SlowMoState(
+        >>>  slowMoState = slow_momentum_comm.SlowMoState(
         >>>     cur_subgroup,
         >>>     grad_sync=True
         >>>  )
@@ -59,7 +59,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # in a intra-node fashion.
         >>>  fsdp_net.register_comm_hook(
         >>>     slowMoState,
-        >>>     slow_momentum.slowMo_hook
+        >>>     slow_momentum_comm.slowmo_hook
         >>>  )
         >>>
         >>>  base_optimizer = torch.optim.SGD(
@@ -67,11 +67,11 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>     lr=1e-2
         >>>  )
         >>>  # Create a SlowMo optimizer that wraps a local optimizer.
-        >>>  slowmo_optim = SlowMomentumOptimizer(
-        >>>  base_optim=base_optimizer,
-        >>>  slowmo_freq=6,
-        >>>  slowmo_factor=0.5,
-        >>>  slowmo_lr=0.1
+        >>>  slowmo_optim = slow_momentum_optimizer.SlowMomentumOptimizer(
+        >>>     base_optim=base_optimizer,
+        >>>     slowmo_freq=6,
+        >>>     slowmo_factor=0.5,
+        >>>     slowmo_lr=0.1
         >>>  )
         >>>
         >>>  # SlowMo runs intra-node gradient averaging at every step,
@@ -178,7 +178,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # check that base optimizer's learning rate is stored in param_groups
         if not (self.param_groups and self.param_groups[0]["lr"]):
             raise ValueError(
-                "Base optimizer does not have parameters" "or learning rate specified."
+                "Base optimizer does not have parameters or learning rate specified."
             )
         self.base_lr = self.param_groups[0]["lr"]
         self._init_slowmo_buffer()

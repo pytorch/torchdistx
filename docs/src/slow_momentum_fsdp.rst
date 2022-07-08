@@ -1,5 +1,3 @@
-.. currentmodule:: torchdistx
-
 Slow Momentum for Fully Sharded Data Parallel training with ``NO_SHARD`` strategy
 ===================================================================================
 Slow Momentum is a general framework to improve the accuracy of
@@ -13,8 +11,8 @@ API
 
 The API consists of ``SlowMoState``, ``slowmo_hook``, and ``SlowMomentumOptimizer``.
 
-.. autoclass:: SlowMoState
+.. autoclass:: torchdistx.slow_momentum.slow_momentum_comm.SlowMoState
 
-.. autofunction:: slowMo_hook
+.. autofunction:: torchdistx.slow_momentum.slow_momentum_comm.slowmo_hook
 
-.. autoclass:: SlowMomentumOptimizer
+.. autoclass:: torchdistx.slow_momentum.slow_momentum_optimizer.SlowMomentumOptimizer

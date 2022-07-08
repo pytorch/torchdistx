@@ -28,7 +28,7 @@ class SlowMoState(default.AllReduceState):
         self.grad_sync = grad_sync
 
 
-def slowMo_hook(state: SlowMoState, grad: torch.Tensor):
+def slowmo_hook(state: SlowMoState, grad: torch.Tensor):
     r"""
     If ``grad_sync`` is enabled in the ``SlowMoState``,
     reduces gradients between workers under the same node.
