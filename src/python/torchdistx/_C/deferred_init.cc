@@ -96,7 +96,8 @@ py::object materializeVariable(const py::object& var) {
 }  // namespace
 
 void initDeferredInitFunctions(py::module& m) {
-  m.def("enable_deferred_init", enableDeferredInit);
+  m.def("enter_deferred_init", enterDeferredInit);
+  m.def("leave_deferred_init", leaveDeferredInit);
 
   m.def("materialize_tensor", materializeVariable);
 }

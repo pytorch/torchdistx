@@ -22,7 +22,8 @@ namespace torchdistx {
 // Forces all newly-constructed tensors on the calling thread to be fake while
 // also recording all operations performed on them in memory. Such tensors can
 // later be materialized by calling `materializeTensor()`.
-TDX_API void enableDeferredInit(bool value);
+TDX_API void enterDeferredInit();
+TDX_API void leaveDeferredInit() noexcept;
 
 // Materializes `tensor`.
 TDX_API at::Tensor materializeTensor(const at::Tensor& tensor);
