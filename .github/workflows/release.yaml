@@ -39,11 +39,11 @@ jobs:
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             },
-            {
-              py: '3.7',
-              build_variant: 'cpu',
-              sanitizer: 'tsan'
-            },
+#            {
+#              py: '3.7',
+#              build_variant: 'cpu',
+#              sanitizer: 'tsan'
+#            },
           ]
         }
 
@@ -63,11 +63,11 @@ jobs:
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             },
-            {
-              py: '3.7',
-              build_variant: 'cpu',
-              sanitizer: 'tsan'
-            },
+#            {
+#              py: '3.7',
+#              build_variant: 'cpu',
+#              sanitizer: 'tsan'
+#            },
           ]
         }
 
@@ -87,11 +87,11 @@ jobs:
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             },
-            {
-              py: '3.7',
-              build_variant: 'cpu',
-              sanitizer: 'tsan'
-            },
+#            {
+#              py: '3.7',
+#              build_variant: 'cpu',
+#              sanitizer: 'tsan'
+#            },
           ]
         }
 
@@ -147,11 +147,11 @@ jobs:
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             },
-            {
-              py: '3.7',
-              build_variant: 'cpu',
-              sanitizer: 'tsan'
-            },
+#            {
+#              py: '3.7',
+#              build_variant: 'cpu',
+#              sanitizer: 'tsan'
+#            },
           ]
         }
 
