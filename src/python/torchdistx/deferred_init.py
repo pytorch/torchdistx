@@ -35,11 +35,11 @@ def deferred_init(module_fn: Callable[..., Module], *args, **kwargs) -> Module:
         to a module after its returned from ``deferred_init()``; otherwise it
         cannot be correctly materialized.
     """
-    _C.enable_deferred_init(True)
+    _C.enter_deferred_init()
     try:
         return module_fn(*args, **kwargs)
     finally:
-        _C.enable_deferred_init(False)
+        _C.leave_deferred_init()
 
 
 def materialize_tensor(tensor: Tensor) -> Tensor:

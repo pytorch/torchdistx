@@ -1076,7 +1076,9 @@ class ProxyVariableHooksHolder {
   // Replaces Autograd's global `VariableHooks` instance with a proxy instance
   // that records hook function calls to the operation graph before forwarding
   // them to Autograd.
-  void overrideGlobalHook(bool value);
+  void replaceGlobalHooks();
+
+  void restoreGlobalHooks() noexcept;
 
  private:
   std::mutex mutex_{};
@@ -1084,30 +1086,44 @@ class ProxyVariableHooksHolder {
   std::size_t hooks_ref_count_ = 0;
 };
 
-void ProxyVariableHooksHolder::overrideGlobalHook(bool value) {
+void ProxyVariableHooksHolder::replaceGlobalHooks() {
   std::lock_guard<std::mutex> guard{mutex_};
 
-  if (value) {
-    if (hooks_ref_count_++ == 0) {
-      VariableHooksInterface* inner = GetVariableHooks();
+  hooks_ref_count_++;
 
-      hooks_ = std::make_unique<ProxyVariableHooks>(inner);
+  if (hooks_ref_count_ == 1) {
+    VariableHooksInterface* inner = GetVariableHooks();
 
-      SetVariableHooks(hooks_.get());
-    }
-  } else if (hooks_ref_count_ > 0) {
-    if (hooks_ref_count_-- == 1) {
-      SetVariableHooks(hooks_->inner());
+    hooks_ = std::make_unique<ProxyVariableHooks>(inner);
 
-      hooks_ = nullptr;
-    }
+    SetVariableHooks(hooks_.get());
   }
 }
 
-void enableVariableHooks(bool value) {
-  static ProxyVariableHooksHolder variable_hooks_holder{};
+void ProxyVariableHooksHolder::restoreGlobalHooks() noexcept {
+  std::lock_guard<std::mutex> guard{mutex_};
 
-  variable_hooks_holder.overrideGlobalHook(value);
+  if (hooks_ref_count_ == 0) {
+    return;
+  }
+
+  hooks_ref_count_--;
+
+  if (hooks_ref_count_ == 0) {
+    SetVariableHooks(hooks_->inner());
+
+    hooks_ = nullptr;
+  }
+}
+
+ProxyVariableHooksHolder variable_hooks_holder{};
+
+void replaceVariableHooks() {
+  variable_hooks_holder.replaceGlobalHooks();
+}
+
+void restoreVariableHooks() noexcept {
+  variable_hooks_holder.restoreGlobalHooks();
 }
 
 }  // namespace
@@ -1119,19 +1135,27 @@ thread_local std::size_t tls_deferred_init_level = 0;
 
 }  // namespace
 
-void enableDeferredInit(bool value) {
-  if (value) {
-    if (tls_deferred_init_level++ == 0) {
-      detail::enableDeferredInitHandler(value);
+void enterDeferredInit() {
+  tls_deferred_init_level++;
 
-      detail::enableVariableHooks(value);
-    }
-  } else if (tls_deferred_init_level > 0) {
-    if (tls_deferred_init_level-- == 1) {
-      detail::enableDeferredInitHandler(value);
+  if (tls_deferred_init_level == 1) {
+    detail::enableDeferredInitHandler(true);
 
-      detail::enableVariableHooks(value);
-    }
+    detail::replaceVariableHooks();
+  }
+}
+
+void leaveDeferredInit() noexcept {
+  if (tls_deferred_init_level == 0) {
+    return;
+  }
+
+  tls_deferred_init_level--;
+
+  if (tls_deferred_init_level == 0) {
+    detail::enableDeferredInitHandler(false);
+
+    detail::restoreVariableHooks();
   }
 }
 
