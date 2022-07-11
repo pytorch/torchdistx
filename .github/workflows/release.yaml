@@ -38,7 +38,7 @@ jobs:
               py: '3.7',
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
-            },
+            }
 #            {
 #              py: '3.7',
 #              build_variant: 'cpu',
@@ -62,7 +62,7 @@ jobs:
               py: '3.7',
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
-            },
+            }
 #            {
 #              py: '3.7',
 #              build_variant: 'cpu',
@@ -86,7 +86,7 @@ jobs:
               py: '3.7',
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
-            },
+            }
 #            {
 #              py: '3.7',
 #              build_variant: 'cpu',
@@ -146,7 +146,7 @@ jobs:
               py: '3.7',
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
-            },
+            }
 #            {
 #              py: '3.7',
 #              build_variant: 'cpu',
