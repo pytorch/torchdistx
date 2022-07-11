@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from contextlib import contextmanager
-from typing import Callable, Iterator
+from typing import Callable, Generator
 
 import torch
 
@@ -41,13 +41,13 @@ torch.Tensor.__repr__ = _patch_tensor_repr()  # type: ignore[assignment]
 
 
 @contextmanager
-def fake_mode() -> Iterator[None]:
+def fake_mode() -> Generator:
     """Instantiates all tensors within its context as fake."""
-    _C.enable_fake_mode(True)
+    _C.enter_fake_mode()
     try:
         yield
     finally:
-        _C.enable_fake_mode(False)
+        _C.leave_fake_mode()
 
 
 def is_fake(tensor: torch.Tensor) -> bool:
