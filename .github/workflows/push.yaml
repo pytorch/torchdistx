@@ -42,11 +42,6 @@ jobs:
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             }
-#            {
-#              py: '3.7',
-#              build_variant: 'cpu',
-#              sanitizer: 'tsan'
-#            },
           ]
         }
 
@@ -60,7 +55,6 @@ jobs:
           py: ['3.7'],
           build_variant: ['cpu'],
           sanitizer: ['nosan', 'asan_ubsan']
-#          sanitizer: ['nosan', 'asan_ubsan', 'tsan']
         }
 
   test_wheel_cu102:
