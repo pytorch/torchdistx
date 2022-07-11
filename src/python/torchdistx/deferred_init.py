@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, TypeVar
 
 from torch import Tensor
 from torch.nn import Module
@@ -13,8 +13,10 @@ from torch.nn import Module
 from . import fake  # noqa: F401
 from . import _C
 
+T = TypeVar("T", bound=Module)
 
-def deferred_init(module_fn: Callable[..., Module], *args, **kwargs) -> Module:
+
+def deferred_init(module_fn: Callable[..., T], *args, **kwargs) -> T:
     """Defers the initialization of a ``Module``.
 
     This function forces all tensors constructed within ``module_fn`` to be
