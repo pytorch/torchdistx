@@ -28,9 +28,15 @@ class FakeTensorImpl;
 }  // namespace detail
 
 // Forces all newly-constructed tensors on the calling thread to be fake.
-TDX_API void enterFakeMode();
+//
+// When `fake_cuda` is set to true, allows constructing fake CUDA tensors even
+// if CUDA is not available.
+TDX_API void enterFakeMode(bool fake_cuda = false);
+
+// Leaves the fake mode in the calling thread.
 TDX_API void leaveFakeMode() noexcept;
 
+// Indicates whether the calling thread is in fake mode.
 TDX_API bool isFakeModeActive() noexcept;
 
 // Indicates whether `tensor` is fake.

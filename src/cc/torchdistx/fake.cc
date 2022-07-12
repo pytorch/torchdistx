@@ -23,6 +23,7 @@
 #include <c10/core/DispatchKeySet.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/core/TensorOptions.h>
+#include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/core/impl/LocalDispatchKeySet.h>
 #include <c10/util/Optional.h>
 #include <c10/util/intrusive_ptr.h>
@@ -35,6 +36,7 @@ namespace torchdistx {
 using at::Argument;
 using at::BackendComponent;
 using at::Device;
+using at::DeviceType;
 using at::DispatchKey;
 using at::DispatchKeySet;
 using at::getAutocastRelatedKeySetFromBackend;
@@ -52,7 +54,10 @@ using at::TensorImpl;
 using at::typeMetaToScalarType;
 using at::VariableVersion;
 
+using c10::impl::device_guard_impl_registry;
+using c10::impl::DeviceGuardImplInterface;
 using c10::impl::ExcludeDispatchKeyGuard;
+using c10::impl::NoOpDeviceGuardImpl;
 using c10::impl::tls_set_dispatch_key_included;
 
 using torch::jit::Stack;
@@ -543,16 +548,58 @@ TORCH_LIBRARY_IMPL(_, Fake, m) {
 }
 
 namespace torchdistx {
+namespace detail {
 namespace {
+
+thread_local std::unique_ptr<DeviceGuardImplInterface> tls_fake_device_guard = nullptr;
+
+void ensureCUDADeviceGuardSet() {
+  constexpr auto cuda_idx = static_cast<std::size_t>(DeviceType::CUDA);
+
+  const DeviceGuardImplInterface* ptr = device_guard_impl_registry[cuda_idx].load();
+
+  // A non-null `ptr` indicates that CUDA is already available.
+  if (ptr != nullptr) {
+    return;
+  }
+
+  tls_fake_device_guard = std::make_unique<NoOpDeviceGuardImpl<DeviceType::CUDA>>();
+
+  // Use a dummy device guard for CUDA. We basically lie to PyTorch here so that
+  // it thinks that CUDA is available. This is brittle, but works pretty well in
+  // practice.
+  device_guard_impl_registry[cuda_idx].store(tls_fake_device_guard.get());
+}
+
+void ensureFakeCUDADeviceGuardUnset() noexcept {
+  constexpr auto cuda_idx = static_cast<std::size_t>(DeviceType::CUDA);
+
+  const DeviceGuardImplInterface* ptr = device_guard_impl_registry[cuda_idx].load();
+  if (ptr == nullptr || ptr != tls_fake_device_guard.get()) {
+    return;
+  }
+
+  // Clean up our dummy device guard.
+  device_guard_impl_registry[cuda_idx].store(nullptr);
+
+  tls_fake_device_guard = nullptr;
+}
 
 thread_local std::size_t tls_fake_mode_level = 0;
 
 }  // namespace
+}  // namespace detail
 
-void enterFakeMode() {
+using detail::tls_fake_mode_level;
+
+void enterFakeMode(bool fake_cuda) {
   tls_fake_mode_level++;
 
   if (tls_fake_mode_level == 1) {
+    if (fake_cuda) {
+      detail::ensureCUDADeviceGuardSet();
+    }
+
     tls_set_dispatch_key_included(DispatchKey::Fake, true);
   }
 }
@@ -565,6 +612,8 @@ void leaveFakeMode() noexcept {
   tls_fake_mode_level--;
 
   if (tls_fake_mode_level == 0) {
+    detail::ensureFakeCUDADeviceGuardUnset();
+
     tls_set_dispatch_key_included(DispatchKey::Fake, false);
   }
 }
