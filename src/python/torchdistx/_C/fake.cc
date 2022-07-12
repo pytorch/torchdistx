@@ -13,7 +13,8 @@
 namespace torchdistx::python {
 
 void initFakeFunctions(pybind11::module& m) {
-  m.def("enable_fake_mode", enableFakeMode);
+  m.def("enter_fake_mode", enterFakeMode);
+  m.def("leave_fake_mode", leaveFakeMode);
 
   m.def("is_fake", [](const at::Tensor& tensor) {
     return isFake(tensor);  // cast to `TensorBase`.

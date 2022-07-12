@@ -28,7 +28,10 @@ class FakeTensorImpl;
 }  // namespace detail
 
 // Forces all newly-constructed tensors on the calling thread to be fake.
-TDX_API void enableFakeMode(bool value);
+TDX_API void enterFakeMode();
+TDX_API void leaveFakeMode() noexcept;
+
+TDX_API bool isFakeModeActive() noexcept;
 
 // Indicates whether `tensor` is fake.
 TDX_API bool isFake(const at::TensorBase& tensor) noexcept;

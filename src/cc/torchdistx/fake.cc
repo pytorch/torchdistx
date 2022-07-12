@@ -549,16 +549,28 @@ thread_local std::size_t tls_fake_mode_level = 0;
 
 }  // namespace
 
-void enableFakeMode(bool value) {
-  if (value) {
-    if (tls_fake_mode_level++ == 0) {
-      tls_set_dispatch_key_included(DispatchKey::Fake, value);
-    }
-  } else if (tls_fake_mode_level > 0) {
-    if (tls_fake_mode_level-- == 1) {
-      tls_set_dispatch_key_included(DispatchKey::Fake, value);
-    }
+void enterFakeMode() {
+  tls_fake_mode_level++;
+
+  if (tls_fake_mode_level == 1) {
+    tls_set_dispatch_key_included(DispatchKey::Fake, true);
   }
+}
+
+void leaveFakeMode() noexcept {
+  if (tls_fake_mode_level == 0) {
+    return;
+  }
+
+  tls_fake_mode_level--;
+
+  if (tls_fake_mode_level == 0) {
+    tls_set_dispatch_key_included(DispatchKey::Fake, false);
+  }
+}
+
+bool isFakeModeActive() noexcept {
+  return tls_fake_mode_level > 0;
 }
 
 bool isFake(const TensorBase& tensor) noexcept {
