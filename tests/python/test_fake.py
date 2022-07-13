@@ -24,7 +24,7 @@ def test_fake_mode_raises_error_if_fake_cuda_is_false() -> None:
     if torch.cuda.is_available():
         pytest.skip("Can only be tested if CUDA is not available.")
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, RuntimeError)):
         with fake_mode():
             torch.ones([10], device="cuda")
 
@@ -36,7 +36,7 @@ def test_cuda_tensor_raises_error_after_fake_mode() -> None:
     with fake_mode(fake_cuda=True):
         torch.ones([10], device="cuda")
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, RuntimeError)):
         torch.ones([10], device="cuda")
 
 
