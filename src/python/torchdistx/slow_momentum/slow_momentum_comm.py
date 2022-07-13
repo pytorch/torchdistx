@@ -14,23 +14,22 @@ class SlowMoState(default.AllReduceState):
     State for the `Slow Momentum <https://arxiv.org/abs/1910.00643>`_ .
 
     Args:
-        subgroup: stores subgroups, where communication will happen,
+        subgroup (ProcessGroup): stores subgroups, where communication will happen,
             by default a subgroup is initialized to workers,
             belonging to the same node.
-        grad_sync: if `True`, gradients will be communicated
+        sync_grads (bool): if `True`, gradients will be communicated
             between members of the same subgroup (default: False).
     """
 
-    def __init__(self, subgroup, grad_sync=False):
-
+    def __init__(self, subgroup, sync_grads=False):
         self.subgroup = subgroup if subgroup is not None else dist.new_subgroups()[0]
         super().__init__(self.subgroup)
-        self.grad_sync = grad_sync
+        self.sync_grads = sync_grads
 
 
 def slowmo_hook(state: SlowMoState, grad: torch.Tensor):
     r"""
-    If ``grad_sync`` is enabled in the ``SlowMoState``,
+    If ``sync_grads`` is enabled in the ``state``,
     reduces gradients between workers under the same node.
 
     Args:
@@ -40,5 +39,5 @@ def slowmo_hook(state: SlowMoState, grad: torch.Tensor):
         grad (torch.Tensor): A gradient for the local batch
             that needs to be communicated across ranks.
     """
-    if state.grad_sync:
+    if state.sync_grads:
         default.allreduce_hook(state, grad)

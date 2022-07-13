@@ -9,7 +9,7 @@ import warnings
 from typing import List
 
 import torch
-from setuptools import Command, setup
+from setuptools import Command, find_packages, setup
 from setuptools.command.install import install as install_base
 from setuptools.dist import Distribution as DistributionBase
 from setuptools.errors import FileError  # type: ignore[attr-defined]
@@ -17,9 +17,6 @@ from setuptools.errors import FileError  # type: ignore[attr-defined]
 package_path = "src/python"
 
 package_name = "torchdistx"
-
-# Specific to SlowMo
-subpackage_name = "torchdistx.slow_momentum"
 
 
 class Distribution(DistributionBase):
@@ -169,7 +166,7 @@ def main() -> None:
         url="https://github.com/pytorch/torchdistx",
         license="BSD",
         keywords=["pytorch", "machine learning"],
-        packages=[package_name, subpackage_name],
+        packages=find_packages(where=package_path),
         package_dir={"": package_path},
         package_data={"": ["py.typed", "*.pyi"]},
         python_requires=">=3.7",

@@ -17,12 +17,13 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
     with a `NO_SHARD` strategy.
 
     Args:
-        base_optim: The base optimizer, which updates local instance of a model
-        slowmo_freq: Specifies how often (number of iterations) slow momentum
+        base_optim (torch.optim.Optimizer):
+            The base optimizer, which updates local instance of a model
+        slowmo_freq (int): Specifies how often (number of iterations) slow momentum
             is to be performed (default: 48)
-        slowmo_factor: This specifies the value of slowmo momentum
+        slowmo_factor (float): This specifies the value of slowmo momentum
             to be used (default: 0.5)
-        slowmo_lr: This specifies the value of slowmo learning rate
+        slowmo_lr (float): This specifies the value of slowmo learning rate
             to be used (default: 1.0)
 
     Example::
@@ -40,7 +41,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  net = torch.nn.Linear(4,10)
         >>>  fsdp_net = FSDP(net)
         >>>
-        >>>  # This implementation communicate gradients between
+        >>>  # This implementation communicates gradients between
         >>>  # workers of the same node,
         >>>  # before averaging of model's parameters between nodes.
         >>>  # The following creates intra-node subgroups
@@ -48,11 +49,11 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # parameters for intra-node communication,
         >>>  # i.e. pre- and post-division factors, and subgroups.
         >>>  # To disable any communication between workers,
-        >>>  # set `grad_sync` to `False`
+        >>>  # set `sync_grads` to `False`
         >>>  cur_subgroup, _ = dist.new_subgroups()
         >>>  slowMoState = slow_momentum_comm.SlowMoState(
         >>>     cur_subgroup,
-        >>>     grad_sync=True
+        >>>     sync_grads=True
         >>>  )
         >>>
         >>>  # Register SlowMo hook, which only communicates gradients
@@ -125,17 +126,17 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.averager = averagers.PeriodicModelAverager(
             period=slowmo_freq, warmup_steps=0
         )
-        self._init_slowmo_buffer()
+        self._init_slowmo_buffers()
 
-    def _init_slowmo_buffer(self):
+    def _init_slowmo_buffers(self):
         for group in self.param_groups:
             for param in group["params"]:
                 # Initialize momentums and memorize initial parameters
                 self.state[param] = {
                     "slow_momentum": torch.zeros(
-                        param.data.shape, device=torch.cuda.current_device()
+                        param.shape, device=torch.cuda.current_device()
                     ),
-                    "prev_param": param.data.detach().clone(),
+                    "prev_param": param.detach().clone(),
                 }
 
     @property
@@ -149,8 +150,8 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         r"""
         This is the same as :class:`torch.optim.Optimizer`
         :meth:`state_dict`, but adds an extra entries to record
-        Slow Momentum's specific parameters: `slowmo_freq`,
-        `slowmo_factor`, `slowmo_lr`, and `step` for the model's averager.
+        Slow Momentum's specific parameters: ``slowmo_freq``,
+        ``slowmo_factor``, ``slowmo_lr``, and ``step`` for the model's averager.
         """
         optim_state_dict = self._base_optim.state_dict()
         optim_state_dict["slowmo_freq"] = self.slowmo_freq
@@ -165,23 +166,23 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         This is the same as :class:`torch.optim.Optimizer`
         :meth:`load_state_dict`, but also restores Slow Momentum's
         specific parameters, saved in the provided ``state_dict``.
-        Additionally, it restors `base_lr`, which refers to
+        Additionally, it restors ``base_lr``, which refers to
         the base optimizer's learning rate, and re-initializes slow momentum
         buffers.
         """
-        self._base_optim.load_state_dict(state_dict)
         self.slowmo_freq = state_dict["slowmo_freq"]
-        self.slowmo_factor = state_dict["slowmo_factor"]
-        self.slowmo_lr = state_dict["slowmo_lr"]
-        self.averager.period = state_dict["slowmo_freq"]
-        self.averager.step = state_dict["step"]
+        self.averager.period = state_dict.pop("slowmo_freq")
+        self.slowmo_factor = state_dict.pop("slowmo_factor")
+        self.slowmo_lr = state_dict.pop("slowmo_lr")
+        self.averager.step = state_dict.pop("step")
+        self._base_optim.load_state_dict(state_dict)
         # check that base optimizer's learning rate is stored in param_groups
         if not (self.param_groups and self.param_groups[0]["lr"]):
             raise ValueError(
                 "Base optimizer does not have parameters or learning rate specified."
             )
         self.base_lr = self.param_groups[0]["lr"]
-        self._init_slowmo_buffer()
+        self._init_slowmo_buffers()
 
     def step(self):
         r"""
@@ -191,16 +192,22 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         which happens every `slowmo_freq` step.
         """
         self._base_optim.step()
+        # Averager averages parameters between workers every `slowmo_freq` step.
+        # At other times it just increases step counter.
         self.averager.average_parameters(params=self.param_groups)
-        if self.averager.step % self.slowmo_freq == 0:
+        # Since at this poin averager has increased its step,
+        # we need to check (self.averager.step - 1).
+        # No need to do momentum step at step 0
+        if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
             for group in self.param_groups:
                 for param in group["params"]:
                     # Update the slow momentum
                     p_state = self.state[param]
+                    factor = 1 / self.base_lr
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
-                        param.data, alpha=1 / self.base_lr
-                    ).add_(p_state["prev_param"], alpha=1 / self.base_lr)
+                        param.data, alpha=factor
+                    ).add_(p_state["prev_param"], alpha=factor)
 
                     # Update parameters
                     p_state["prev_param"].add_(
@@ -210,3 +217,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
 
     def zero_grad(self, set_to_none: bool = False):  # type: ignore[override]
         self._base_optim.zero_grad(set_to_none=set_to_none)
+
+    def add_param_group(self, param_group):
+        self._base_optim.add_param_group(param_group)
