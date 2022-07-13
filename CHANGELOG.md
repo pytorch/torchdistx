@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.3.0] - 2022-mm-dd
-- TBD
+### Added
+- Adds a `fake_cuda` parameter to `fake_mode()` that allows constructing fake
+  CUDA tensors even if CUDA is not available.
 
 ## [0.2.0] - 2022-06-23
 ### Added

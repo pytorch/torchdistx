@@ -41,9 +41,15 @@ torch.Tensor.__repr__ = _patch_tensor_repr()  # type: ignore[assignment]
 
 
 @contextmanager
-def fake_mode() -> Generator:
-    """Instantiates all tensors within its context as fake."""
-    _C.enter_fake_mode()
+def fake_mode(*, fake_cuda: bool = False) -> Generator:
+    """Instantiates all tensors within its context as fake.
+
+    Args:
+        fake_cuda:
+            If ``True``, allows constructing fake CUDA tensors even if CUDA is
+            not available. Ignored if CUDA is already available.
+    """
+    _C.enter_fake_mode(fake_cuda)
     try:
         yield
     finally:
