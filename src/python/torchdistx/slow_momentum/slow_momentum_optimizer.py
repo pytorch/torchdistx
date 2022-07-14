@@ -38,12 +38,11 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>     slow_momentum_optimizer
         >>>  )
         >>>
-        >>>  net = torch.nn.Linear(4,10)
+        >>>  net = torch.nn.Linear(4, 10)
         >>>  fsdp_net = FSDP(net)
-        >>>
         >>>  # This implementation communicates gradients between
-        >>>  # workers of the same node,
-        >>>  # before averaging of model's parameters between nodes.
+        >>>  # workers of the same node
+        >>>  # before averaging the model's parameters between nodes.
         >>>  # The following creates intra-node subgroups
         >>>  # and SlowMoState will take care of storing all required
         >>>  # parameters for intra-node communication,
@@ -51,7 +50,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # To disable any communication between workers,
         >>>  # set `sync_grads` to `False`
         >>>  cur_subgroup, _ = dist.new_subgroups()
-        >>>  slowMoState = slow_momentum_comm.SlowMoState(
+        >>>  slowmo_state = slow_momentum_comm.SlowMoState(
         >>>     cur_subgroup,
         >>>     sync_grads=True
         >>>  )
@@ -59,7 +58,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # Register SlowMo hook, which only communicates gradients
         >>>  # in a intra-node fashion.
         >>>  fsdp_net.register_comm_hook(
-        >>>     slowMoState,
+        >>>     slowmo_state,
         >>>     slow_momentum_comm.slowmo_hook
         >>>  )
         >>>
@@ -78,7 +77,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # SlowMo runs intra-node gradient averaging at every step,
         >>>  # every 6th step it will run model averaging and
         >>>  # a slow momentum update.
-        >>>  for step in range(0, 200):
+        >>>  for step in range(200):
         >>>     slowmo_optim.zero_grad()
         >>>     loss = loss_fn(output, labels)
         >>>     loss.backward()
@@ -129,6 +128,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self._init_slowmo_buffers()
 
     def _init_slowmo_buffers(self):
+        self.state.clear()
         for group in self.param_groups:
             for param in group["params"]:
                 # Initialize momentums and memorize initial parameters
@@ -184,6 +184,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.base_lr = self.param_groups[0]["lr"]
         self._init_slowmo_buffers()
 
+    @torch.no_grad()
     def step(self):
         r"""
         Performs a single optimization step (parameter update)
@@ -195,7 +196,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # Averager averages parameters between workers every `slowmo_freq` step.
         # At other times it just increases step counter.
         self.averager.average_parameters(params=self.param_groups)
-        # Since at this poin averager has increased its step,
+        # Since at this point averager has increased its step,
         # we need to check (self.averager.step - 1).
         # No need to do momentum step at step 0
         if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
@@ -206,14 +207,14 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
                     factor = 1 / self.base_lr
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
-                        param.data, alpha=factor
+                        param, alpha=factor
                     ).add_(p_state["prev_param"], alpha=factor)
 
                     # Update parameters
                     p_state["prev_param"].add_(
                         p_state["slow_momentum"], alpha=-self.slowmo_lr * self.base_lr
                     )
-                    param.data.copy_(p_state["prev_param"])
+                    param.copy_(p_state["prev_param"])
 
     def zero_grad(self, set_to_none: bool = False):  # type: ignore[override]
         self._base_optim.zero_grad(set_to_none=set_to_none)
