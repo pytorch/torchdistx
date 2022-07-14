@@ -11,8 +11,8 @@ API
 
 The API consists of ``SlowMoState``, ``slowmo_hook``, and ``SlowMomentumOptimizer``.
 
-.. autoclass:: torchdistx.slow_momentum.slow_momentum_comm.SlowMoState
+.. autoclass:: torchdistx.slowmo.slowmo_comm.SlowMoState
 
-.. autofunction:: torchdistx.slow_momentum.slow_momentum_comm.slowmo_hook
+.. autofunction:: torchdistx.slowmo.slowmo_comm.slowmo_hook
 
-.. autoclass:: torchdistx.slow_momentum.slow_momentum_optimizer.SlowMomentumOptimizer
+.. autoclass:: torchdistx.slowmo.slowmo_optimizer.SlowMomentumOptimizer

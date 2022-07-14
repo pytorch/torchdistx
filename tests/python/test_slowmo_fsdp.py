@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import sys
 import tempfile
 from typing import Optional
@@ -23,7 +22,7 @@ from torch.testing._internal.common_utils import (
     run_tests,
 )
 
-from torchdistx.slow_momentum import slow_momentum_comm, slow_momentum_optimizer
+from torchdistx.slowmo import slowmo_comm, slowmo_optimizer
 
 if not dist.is_available():
     print("Distributed not available, skipping tests", file=sys.stderr)
@@ -57,7 +56,7 @@ class Net(nn.Module):
                 self.out,
             ),
             has_wrapping=has_wrapping,
-            **fsdp_kwargs
+            **fsdp_kwargs,
         )
 
     def forward(self, x):
@@ -90,7 +89,7 @@ class TestCommunicationHooks(FSDPTest):
         )
 
     def _init_slowmo_optimizer(self, base_optim, slowmo_freq):
-        return slow_momentum_optimizer.SlowMomentumOptimizer(
+        return slowmo_optimizer.SlowMomentumOptimizer(
             base_optim=base_optim,
             slowmo_freq=slowmo_freq,
             slowmo_factor=0.5,
@@ -114,19 +113,19 @@ class TestCommunicationHooks(FSDPTest):
             [self.rank], dtype=torch.float, device=self.rank  # type: ignore[arg-type]
         )
 
-        slowmo_state = slow_momentum_comm.SlowMoState(subgroup=None, sync_grads=True)
+        slowmo_state = slowmo_comm.SlowMoState(subgroup=None, sync_grads=True)
         # check that a default subgroup was created,
         # for small scale experiments equal to `world_size`
         self.assertEqual(slowmo_state.subgroup.size(), dist.get_world_size())
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         self.assertEqual(cur_subgroup.size(), 1)
-        slowmo_state = slow_momentum_comm.SlowMoState(cur_subgroup, sync_grads=True)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup, sync_grads=True)
         # check that state has subgroup registered
         self.assertEqual(slowmo_state.subgroup.size(), cur_subgroup.size())
         self.assertEqual(slowmo_state.subgroup.rank(), 0)
 
-        fsdp_net.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
+        fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
 
         # Make sure grads were not reduced,
         # since each subgroup is only one worker.
@@ -147,11 +146,11 @@ class TestCommunicationHooks(FSDPTest):
         # create a subgroup equal to the whole WORLD
         cur_subgroup = dist.distributed_c10d._get_default_group()
         self.assertEqual(cur_subgroup.size(), dist.get_world_size())
-        slowmo_state = slow_momentum_comm.SlowMoState(cur_subgroup, sync_grads=False)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup, sync_grads=False)
         # check that state has subgroup registered
         self.assertEqual(slowmo_state.subgroup.size(), cur_subgroup.size())
 
-        fsdp_net.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
+        fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
 
         # Make sure grads were not reduced, since `sync_grads` is set to False
         # Gradient in this case is equal to rank
@@ -172,15 +171,15 @@ class TestCommunicationHooks(FSDPTest):
         )
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
-        slowmo_state = slow_momentum_comm.SlowMoState(cur_subgroup)
-        fsdp_net.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
-        fsdp_net_slowmo.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
+        fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
+        fsdp_net_slowmo.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         inpt = torch.randn(  # type: ignore[call-overload]
             (7, 8), dtype=torch.float, device=self.rank
         )
 
         slowmo_optim = self._init_slowmo_optimizer(
-            base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
+            base_optim=torch.optim.Adam(fsdp_net_slowmo.parameters(), lr=1e-2),
             slowmo_freq=6,
         )
 
@@ -191,7 +190,7 @@ class TestCommunicationHooks(FSDPTest):
         slowmo_optim.averager.period = 3
 
         averager2 = self._init_averager(period=3)
-        base_optimizer = torch.optim.SGD(fsdp_net.parameters(), lr=1e-2)
+        base_optimizer = torch.optim.Adam(fsdp_net.parameters(), lr=1e-2)
 
         for _ in range(4):
             self._train_step(inpt, fsdp_net, base_optimizer)
@@ -215,9 +214,9 @@ class TestCommunicationHooks(FSDPTest):
         learning_rate = 1e-2
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
-        slowmo_state = slow_momentum_comm.SlowMoState(cur_subgroup)
-        fsdp_net.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
-        fsdp_net_slowmo.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
+        fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
+        fsdp_net_slowmo.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         inpt = torch.tensor(
             [(self.rank + 1)],
             dtype=torch.float,
@@ -231,14 +230,17 @@ class TestCommunicationHooks(FSDPTest):
         averager2 = self._init_averager(period=2)
         base_optimizer = torch.optim.SGD(fsdp_net.parameters(), lr=learning_rate)
 
-        for v in slowmo_optim.state.values():
-            initial_prev_params = copy.deepcopy(v["prev_param"])
-            initial_slow_momentum_buffer = copy.deepcopy(v["slow_momentum"])
+        for param in fsdp_net_slowmo.params:
+            initial_prev_params = param.detach().clone()
+            initial_slow_momentum_buffer = torch.zeros_like(initial_prev_params)
 
         for _ in range(3):
             self._train_step(inpt, fsdp_net, base_optimizer)
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
             averager2.average_parameters(fsdp_net.parameters())
+
+        print(initial_prev_params)
+        print(initial_slow_momentum_buffer)
 
         # parameters before slow momentum update and after averaging
         # are in `fsdp_net.params[0]`
@@ -252,6 +254,9 @@ class TestCommunicationHooks(FSDPTest):
 
         # parameter_(t+1) = prev_param - slowmo_lr * base_lr * momentum_(t+1)
         calculated_params = initial_prev_params - 0.1 * learning_rate * momentum
+
+        print(f"{calculated_params}")
+        print(f"actual={fsdp_net_slowmo.params}")
 
         self.assertEqual(fsdp_net_slowmo.params[0], calculated_params)
 
@@ -268,8 +273,8 @@ class TestCommunicationHooks(FSDPTest):
         ).to(self.rank)
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
-        slowmo_state = slow_momentum_comm.SlowMoState(cur_subgroup)
-        fsdp_net_slowmo.register_comm_hook(slowmo_state, slow_momentum_comm.slowmo_hook)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
+        fsdp_net_slowmo.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         inpt = torch.randn(  # type: ignore[call-overload]
             (7, 8), dtype=torch.float, device=self.rank
         )
@@ -293,13 +298,14 @@ class TestCommunicationHooks(FSDPTest):
         checkpoint = torch.load(chkpt, map_location=map_location)
 
         # initialize dummy optimizer with different parameters
-        slowmo_optim_dummy = slow_momentum_optimizer.SlowMomentumOptimizer(
+        slowmo_optim_dummy = slowmo_optimizer.SlowMomentumOptimizer(
             base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
             slowmo_freq=2,
             slowmo_factor=3,
             slowmo_lr=4,
         )
         slowmo_optim_dummy.load_state_dict(checkpoint["optim_state_dict"])
+
         # make sure averager's period and step were updated
         self.assertEqual(
             slowmo_optim_dummy.averager.period, slowmo_optim.averager.period
@@ -322,14 +328,14 @@ class TestCommunicationHooks(FSDPTest):
         with self.assertRaisesRegex(
             ValueError, "Base optimizer is a required" " parameter."
         ):
-            _ = slow_momentum_optimizer.SlowMomentumOptimizer(
+            _ = slowmo_optimizer.SlowMomentumOptimizer(
                 base_optim=None, slowmo_freq=4, slowmo_factor=0.5, slowmo_lr=0.1
             )
 
         with self.assertRaisesRegex(
             ValueError, "Invalid ``slowmo_freq`` parameter, must be a positive value."
         ):
-            _ = slow_momentum_optimizer.SlowMomentumOptimizer(
+            _ = slowmo_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=-3,
                 slowmo_factor=0.5,
@@ -339,7 +345,7 @@ class TestCommunicationHooks(FSDPTest):
         with self.assertRaisesRegex(
             ValueError, "Invalid ``slowmo_factor`` parameter, must be non-negative."
         ):
-            _ = slow_momentum_optimizer.SlowMomentumOptimizer(
+            _ = slowmo_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
                 slowmo_factor=-0.5,
@@ -349,7 +355,7 @@ class TestCommunicationHooks(FSDPTest):
         with self.assertRaisesRegex(
             ValueError, "Invalid ``slowmo_lr`` parameter, must be non-negative."
         ):
-            _ = slow_momentum_optimizer.SlowMomentumOptimizer(
+            _ = slowmo_optimizer.SlowMomentumOptimizer(
                 base_optim=torch.optim.SGD(net.parameters(), lr=1e-2),
                 slowmo_freq=4,
                 slowmo_factor=0.5,
@@ -362,15 +368,20 @@ class TestCommunicationHooks(FSDPTest):
 
         # default simple net has size=(1, 5)
         fsdp_net_slowmo = self._init_fsdp(sharding_strategy)
-
+        inpt = torch.tensor(
+            [self.rank], dtype=torch.float, device=self.rank  # type: ignore[arg-type]
+        )
         slowmo_optim = self._init_slowmo_optimizer(
             base_optim=torch.optim.SGD(fsdp_net_slowmo.parameters(), lr=1e-2),
             slowmo_freq=2,
         )
+        self.assertEqual(
+            slowmo_optim.prev_parameters[0], torch.flatten(fsdp_net_slowmo.weight)
+        )
+        self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
 
         for v in slowmo_optim.state.values():
             self.assertEqual(v["slow_momentum"], torch.zeros([5], device=self.rank))
-            self.assertEqual(v["prev_param"], torch.flatten(fsdp_net_slowmo.weight))
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)

@@ -33,9 +33,9 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  from torch.distributed.fsdp import(
         >>>    FullyShardedDataParallel as FSDP
         >>>  )
-        >>>  from torchdistx.slow_momentum import(
-        >>>     slow_momentum_comm,
-        >>>     slow_momentum_optimizer
+        >>>  from torchdistx.slowmo import(
+        >>>     slowmo_comm,
+        >>>     slowmo_optimizer
         >>>  )
         >>>
         >>>  net = torch.nn.Linear(4, 10)
@@ -50,7 +50,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # To disable any communication between workers,
         >>>  # set `sync_grads` to `False`
         >>>  cur_subgroup, _ = dist.new_subgroups()
-        >>>  slowmo_state = slow_momentum_comm.SlowMoState(
+        >>>  slowmo_state = slowmo_comm.SlowMoState(
         >>>     cur_subgroup,
         >>>     sync_grads=True
         >>>  )
@@ -59,7 +59,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>  # in a intra-node fashion.
         >>>  fsdp_net.register_comm_hook(
         >>>     slowmo_state,
-        >>>     slow_momentum_comm.slowmo_hook
+        >>>     slowmo_comm.slowmo_hook
         >>>  )
         >>>
         >>>  base_optimizer = torch.optim.SGD(
@@ -67,7 +67,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         >>>     lr=1e-2
         >>>  )
         >>>  # Create a SlowMo optimizer that wraps a local optimizer.
-        >>>  slowmo_optim = slow_momentum_optimizer.SlowMomentumOptimizer(
+        >>>  slowmo_optim = slowmo_optimizer.SlowMomentumOptimizer(
         >>>     base_optim=base_optimizer,
         >>>     slowmo_freq=6,
         >>>     slowmo_factor=0.5,
@@ -125,19 +125,26 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.averager = averagers.PeriodicModelAverager(
             period=slowmo_freq, warmup_steps=0
         )
-        self._init_slowmo_buffers()
+        self.buffers_initialized = False
 
-    def _init_slowmo_buffers(self):
-        self.state.clear()
+        # Memorize initial parameters. Can't put then in the `state`,
+        # because some of optimizers rely on the state being empty during the `step()`
+        # to put specific information into the state. The very first set of parameters
+        # should be remembered before the first `step()`,
+        # thus can't put this info into `state`.
+        self.prev_parameters = []
         for group in self.param_groups:
             for param in group["params"]:
-                # Initialize momentums and memorize initial parameters
-                self.state[param] = {
-                    "slow_momentum": torch.zeros(
-                        param.shape, device=torch.cuda.current_device()
-                    ),
-                    "prev_param": param.detach().clone(),
-                }
+                self.prev_parameters.append(param.detach().clone())
+
+    def _init_slowmo_buffers(self):
+        self.buffers_initialized = True
+        for group in self.param_groups:
+            for param in group["params"]:
+                # Initialize momentums
+                self.state[param]["slow_momentum"] = torch.zeros(
+                    param.shape, device=torch.cuda.current_device()
+                )
 
     @property
     def state(self):
@@ -182,7 +189,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
                 "Base optimizer does not have parameters or learning rate specified."
             )
         self.base_lr = self.param_groups[0]["lr"]
-        self._init_slowmo_buffers()
 
     @torch.no_grad()
     def step(self):
@@ -193,6 +199,10 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         which happens every `slowmo_freq` step.
         """
         self._base_optim.step()
+        # Some optimizers like Adam rely on `len(self.state) == 0` to initialize
+        # its own buffers. This is why initialization of a slowmo buffer is here
+        if not self.buffers_initialized:
+            self._init_slowmo_buffers()
         # Averager averages parameters between workers every `slowmo_freq` step.
         # At other times it just increases step counter.
         self.averager.average_parameters(params=self.param_groups)
@@ -201,20 +211,20 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # No need to do momentum step at step 0
         if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
             for group in self.param_groups:
-                for param in group["params"]:
+                for idx, param in enumerate(group["params"]):
                     # Update the slow momentum
                     p_state = self.state[param]
                     factor = 1 / self.base_lr
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
                         param, alpha=factor
-                    ).add_(p_state["prev_param"], alpha=factor)
+                    ).add_(self.prev_parameters[idx], alpha=factor)
 
                     # Update parameters
-                    p_state["prev_param"].add_(
+                    self.prev_parameters[idx].add_(
                         p_state["slow_momentum"], alpha=-self.slowmo_lr * self.base_lr
                     )
-                    param.copy_(p_state["prev_param"])
+                    param.copy_(self.prev_parameters[idx])
 
     def zero_grad(self, set_to_none: bool = False):  # type: ignore[override]
         self._base_optim.zero_grad(set_to_none=set_to_none)
