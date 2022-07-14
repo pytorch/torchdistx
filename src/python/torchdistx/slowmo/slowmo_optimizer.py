@@ -96,15 +96,11 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self._base_optim = base_optim
 
         # check that base optimizer's learning rate is stored in param_groups
-        if not (
-            self._base_optim.param_groups and self._base_optim.param_groups[0]["lr"]
-        ):
+        if not (self._base_optim.param_groups):
             raise ValueError(
-                "Provided base optimizer does not have "
-                "parameters or learning rate specified."
+                "Provided base optimizer does not have parameters specified."
             )
         self.param_groups = self._base_optim.param_groups
-        self.base_lr = self.param_groups[0]["lr"]
 
         if slowmo_freq < 1:
             raise ValueError(
@@ -173,9 +169,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         This is the same as :class:`torch.optim.Optimizer`
         :meth:`load_state_dict`, but also restores Slow Momentum's
         specific parameters, saved in the provided ``state_dict``.
-        Additionally, it restors ``base_lr``, which refers to
-        the base optimizer's learning rate, and re-initializes slow momentum
-        buffers.
         """
         self.slowmo_freq = state_dict["slowmo_freq"]
         self.averager.period = state_dict.pop("slowmo_freq")
@@ -188,7 +181,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
             raise ValueError(
                 "Base optimizer does not have parameters or learning rate specified."
             )
-        self.base_lr = self.param_groups[0]["lr"]
 
     @torch.no_grad()
     def step(self):
@@ -214,7 +206,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
                 for idx, param in enumerate(group["params"]):
                     # Update the slow momentum
                     p_state = self.state[param]
-                    factor = 1 / self.base_lr
+                    factor = 1 / group["lr"]
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
                         param, alpha=factor
@@ -222,7 +214,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
 
                     # Update parameters
                     self.prev_parameters[idx].add_(
-                        p_state["slow_momentum"], alpha=-self.slowmo_lr * self.base_lr
+                        p_state["slow_momentum"], alpha=-self.slowmo_lr * group["lr"]
                     )
                     param.copy_(self.prev_parameters[idx])
 

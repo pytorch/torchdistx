@@ -52,15 +52,13 @@ class Net(nn.Module):
                 ),
                 nn.ReLU(),
                 self.linear2,
-                nn.ReLU(),
-                self.out,
             ),
             has_wrapping=has_wrapping,
             **fsdp_kwargs,
         )
 
     def forward(self, x):
-        return self.net(x)
+        return self.out(nn.functional.relu(self.net(x)))
 
     def _maybe_wrap_fsdp(self, module, has_wrapping, **kwargs):
         return module if not has_wrapping else FSDP(module, **kwargs)
@@ -171,7 +169,7 @@ class TestCommunicationHooks(FSDPTest):
         )
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
-        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup, sync_grads=False)
         fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         fsdp_net_slowmo.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         inpt = torch.randn(  # type: ignore[call-overload]
@@ -214,7 +212,7 @@ class TestCommunicationHooks(FSDPTest):
         learning_rate = 1e-2
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
-        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
+        slowmo_state = slowmo_comm.SlowMoState(cur_subgroup, sync_grads=False)
         fsdp_net.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         fsdp_net_slowmo.register_comm_hook(slowmo_state, slowmo_comm.slowmo_hook)
         inpt = torch.tensor(

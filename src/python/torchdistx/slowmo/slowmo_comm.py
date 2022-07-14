@@ -18,10 +18,10 @@ class SlowMoState(default.AllReduceState):
             by default a subgroup is initialized to workers,
             belonging to the same node.
         sync_grads (bool): if `True`, gradients will be communicated
-            between members of the same subgroup (default: False).
+            between members of the same subgroup (default: True).
     """
 
-    def __init__(self, subgroup, sync_grads=False):
+    def __init__(self, subgroup, sync_grads=True):
         self.subgroup = subgroup if subgroup is not None else dist.new_subgroups()[0]
         super().__init__(self.subgroup)
         self.sync_grads = sync_grads
