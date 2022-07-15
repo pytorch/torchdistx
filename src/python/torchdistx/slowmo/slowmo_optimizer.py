@@ -123,11 +123,15 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         )
         self.buffers_initialized = False
 
-        # Memorize initial parameters. Can't put them in the `state`,
-        # because some of optimizers rely on the state being empty during the `step()`
-        # to put specific information into the state. The very first set of parameters
-        # should be remembered before the first `step()`,
-        # thus can't put this info into `state`.
+        # Memorize initial parameters before the first `step()`.
+        # Can't put them in `self.state`, because some of optimizers rely
+        # `self.state` being empty during the `step()`
+        # to initialize optimizer states.
+        # `self._prev_parameters` must be in sync with
+        # the flattened version of `self.param_groups`,
+        # since this implementation relys `self._prev_parameters`
+        # having the same order of parameters as in `self.param_groups`
+        # to perform a slow momentum update.
         self._prev_parameters = []
         for group in self.param_groups:
             for param in group["params"]:
@@ -135,6 +139,9 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
 
     @property
     def state(self):
+        r"""
+        Forwards to base optimizer's `state`.
+        """
         return self._base_optim.state
 
     def __repr__(self):
@@ -187,7 +194,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.averager.average_parameters(params=self.param_groups)
         # Since at this point averager has increased its step,
         # we need to check (self.averager.step - 1).
-        # No need to do momentum step at step 0
+        # No need to do momentum step at step 0.
         if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
             prev_param_idx = 0
             for group in self.param_groups:
@@ -201,7 +208,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
                     # Update the slow momentum
                     p_state = self.state[param]
                     factor = 1 / group["lr"]
-
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
                         param, alpha=factor
                     ).add_(self._prev_parameters[prev_param_idx], alpha=factor)

@@ -263,6 +263,7 @@ class TestCommunicationHooks(FSDPTest):
             device_id=torch.cuda.current_device(),
             sharding_strategy=sharding_strategy,
         ).to(self.rank)
+        n_steps = 10
 
         cur_subgroup = dist.new_group(ranks=[self.rank])
         slowmo_state = slowmo_comm.SlowMoState(cur_subgroup)
@@ -276,7 +277,7 @@ class TestCommunicationHooks(FSDPTest):
             slowmo_freq=4,
         )
 
-        for _ in range(10):
+        for _ in range(n_steps):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
 
         state = {"optim_state_dict": slowmo_optim.state_dict()}
@@ -309,10 +310,10 @@ class TestCommunicationHooks(FSDPTest):
         self.assertEqual(slowmo_optim_dummy.slowmo_factor, slowmo_optim.slowmo_factor)
         self.assertEqual(slowmo_optim_dummy.slowmo_lr, slowmo_optim.slowmo_lr)
 
-        for _ in range(10):
+        for _ in range(n_steps):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim_dummy)
 
-        self.assertEqual(slowmo_optim_dummy.averager.step, 20)
+        self.assertEqual(slowmo_optim_dummy.averager.step, 2 * n_steps)
 
     @skip_if_lt_x_gpu(2)
     def test_slowmo_optimizer_errors(self):
