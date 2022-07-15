@@ -237,9 +237,6 @@ class TestCommunicationHooks(FSDPTest):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
             averager2.average_parameters(fsdp_net.parameters())
 
-        print(initial_prev_params)
-        print(initial_slow_momentum_buffer)
-
         # parameters before slow momentum update and after averaging
         # are in `fsdp_net.params[0]`
         # can use them to calculate momentum update
@@ -252,9 +249,6 @@ class TestCommunicationHooks(FSDPTest):
 
         # parameter_(t+1) = prev_param - slowmo_lr * base_lr * momentum_(t+1)
         calculated_params = initial_prev_params - 0.1 * learning_rate * momentum
-
-        print(f"{calculated_params}")
-        print(f"actual={fsdp_net_slowmo.params}")
 
         self.assertEqual(fsdp_net_slowmo.params[0], calculated_params)
 
@@ -374,12 +368,18 @@ class TestCommunicationHooks(FSDPTest):
             slowmo_freq=2,
         )
         self.assertEqual(
-            slowmo_optim.prev_parameters[0], torch.flatten(fsdp_net_slowmo.weight)
+            slowmo_optim._prev_parameters[0], torch.flatten(fsdp_net_slowmo.weight)
         )
-        self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
 
-        for v in slowmo_optim.state.values():
-            self.assertEqual(v["slow_momentum"], torch.zeros([5], device=self.rank))
+        for _ in range(3):
+            self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
+
+        self.assertIn("slow_momentum", list(slowmo_optim.state.values())[0])
+        self.assertEqual(len(slowmo_optim._prev_parameters), 1)
+        w2 = torch.ones(3, 3).to(self.rank)
+        w2.requires_grad = True
+        slowmo_optim.add_param_group({"params": w2})
+        self.assertEqual(len(slowmo_optim._prev_parameters), 2)
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)

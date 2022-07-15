@@ -123,24 +123,15 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         )
         self.buffers_initialized = False
 
-        # Memorize initial parameters. Can't put then in the `state`,
+        # Memorize initial parameters. Can't put them in the `state`,
         # because some of optimizers rely on the state being empty during the `step()`
         # to put specific information into the state. The very first set of parameters
         # should be remembered before the first `step()`,
         # thus can't put this info into `state`.
-        self.prev_parameters = []
+        self._prev_parameters = []
         for group in self.param_groups:
             for param in group["params"]:
-                self.prev_parameters.append(param.detach().clone())
-
-    def _init_slowmo_buffers(self):
-        self.buffers_initialized = True
-        for group in self.param_groups:
-            for param in group["params"]:
-                # Initialize momentums
-                self.state[param]["slow_momentum"] = torch.zeros(
-                    param.shape, device=torch.cuda.current_device()
-                )
+                self._prev_parameters.append(param.detach().clone())
 
     @property
     def state(self):
@@ -191,10 +182,6 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         which happens every `slowmo_freq` step.
         """
         self._base_optim.step()
-        # Some optimizers like Adam rely on `len(self.state) == 0` to initialize
-        # its own buffers. This is why initialization of a slowmo buffer is here
-        if not self.buffers_initialized:
-            self._init_slowmo_buffers()
         # Averager averages parameters between workers every `slowmo_freq` step.
         # At other times it just increases step counter.
         self.averager.average_parameters(params=self.param_groups)
@@ -204,22 +191,29 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
             for group in self.param_groups:
                 for idx, param in enumerate(group["params"]):
+                    # Initialize momentums if they were not initialized
+                    if "slow_momentum" not in self.state[param]:
+                        self.state[param]["slow_momentum"] = torch.zeros(
+                            param.shape, device=torch.cuda.current_device()
+                        )
+
                     # Update the slow momentum
                     p_state = self.state[param]
                     factor = 1 / group["lr"]
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
                         param, alpha=factor
-                    ).add_(self.prev_parameters[idx], alpha=factor)
-
+                    ).add_(self._prev_parameters[idx], alpha=factor)
                     # Update parameters
-                    self.prev_parameters[idx].add_(
+                    self._prev_parameters[idx].add_(
                         p_state["slow_momentum"], alpha=-self.slowmo_lr * group["lr"]
                     )
-                    param.copy_(self.prev_parameters[idx])
+                    param.copy_(self._prev_parameters[idx])
 
     def zero_grad(self, set_to_none: bool = False):  # type: ignore[override]
         self._base_optim.zero_grad(set_to_none=set_to_none)
 
     def add_param_group(self, param_group):
         self._base_optim.add_param_group(param_group)
+        for param in param_group["params"]:
+            self._prev_parameters.append(param.detach().clone())
