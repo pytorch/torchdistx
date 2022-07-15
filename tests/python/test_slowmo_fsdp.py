@@ -375,7 +375,9 @@ class TestCommunicationHooks(FSDPTest):
         for _ in range(3):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
 
-        self.assertIn("slow_momentum", list(slowmo_optim.state.values())[0])
+        slowmo_statedict = slowmo_optim.state_dict()
+        for entry in slowmo_statedict["state"].values():
+            self.assertIn("slow_momentum", entry)
         self.assertEqual(len(slowmo_optim._prev_parameters), 1)
         w2 = torch.ones(3, 3).to(self.rank)
         w2.requires_grad = True
@@ -386,7 +388,8 @@ class TestCommunicationHooks(FSDPTest):
         # for the second group.
         for _ in range(3):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
-        self.assertIn("slow_momentum", list(slowmo_optim.state.values())[1])
+        for entry in slowmo_statedict["state"].values():
+            self.assertIn("slow_momentum", entry)
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)
