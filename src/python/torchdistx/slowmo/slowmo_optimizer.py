@@ -189,8 +189,9 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # we need to check (self.averager.step - 1).
         # No need to do momentum step at step 0
         if (self.averager.step - 1) % self.slowmo_freq == 0 and self.averager.step != 1:
+            prev_param_idx = 0
             for group in self.param_groups:
-                for idx, param in enumerate(group["params"]):
+                for param in group["params"]:
                     # Initialize momentums if they were not initialized
                     if "slow_momentum" not in self.state[param]:
                         self.state[param]["slow_momentum"] = torch.zeros(
@@ -203,12 +204,13 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
 
                     p_state["slow_momentum"].mul_(self.slowmo_factor).sub_(
                         param, alpha=factor
-                    ).add_(self._prev_parameters[idx], alpha=factor)
+                    ).add_(self._prev_parameters[prev_param_idx], alpha=factor)
                     # Update parameters
-                    self._prev_parameters[idx].add_(
+                    self._prev_parameters[prev_param_idx].add_(
                         p_state["slow_momentum"], alpha=-self.slowmo_lr * group["lr"]
                     )
-                    param.copy_(self._prev_parameters[idx])
+                    param.copy_(self._prev_parameters[prev_param_idx])
+                    prev_param_idx += 1
 
     def zero_grad(self, set_to_none: bool = False):  # type: ignore[override]
         self._base_optim.zero_grad(set_to_none=set_to_none)
