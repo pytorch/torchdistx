@@ -381,7 +381,7 @@ class TestCommunicationHooks(FSDPTest):
         w2.requires_grad = True
         slowmo_optim.add_param_group({"params": w2})
         self.assertEqual(len(slowmo_optim._prev_parameters), 2)
-        # At this poin we have 2 parameter groups and should be able to
+        # At this point we have 2 parameter groups and should be able to
         # run with both of them, `slow_momentum` should appear in optimizer's state
         # for the second group.
         for _ in range(3):

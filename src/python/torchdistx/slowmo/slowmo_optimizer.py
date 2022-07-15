@@ -129,7 +129,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         # to initialize optimizer states.
         # `self._prev_parameters` must be in sync with
         # the flattened version of `self.param_groups`,
-        # since this implementation relys `self._prev_parameters`
+        # since this implementation relies on `self._prev_parameters`
         # having the same order of parameters as in `self.param_groups`
         # to perform a slow momentum update.
         self._prev_parameters = []
@@ -140,7 +140,7 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
     @property
     def state(self):
         r"""
-        Forwards to base optimizer's `state`.
+        Forwards to base optimizer's ``state``.
         """
         return self._base_optim.state
 
