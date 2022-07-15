@@ -356,7 +356,7 @@ class TestCommunicationHooks(FSDPTest):
 
     @skip_if_lt_x_gpu(2)
     @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
-    def test_slowmo_optimizer_buffer_init(self, sharding_strategy):
+    def test_slowmo_optimizer_buffer(self, sharding_strategy):
 
         # default simple net has size=(1, 5)
         fsdp_net_slowmo = self._init_fsdp(sharding_strategy)
@@ -380,6 +380,12 @@ class TestCommunicationHooks(FSDPTest):
         w2.requires_grad = True
         slowmo_optim.add_param_group({"params": w2})
         self.assertEqual(len(slowmo_optim._prev_parameters), 2)
+        # At this poin we have 2 parameter groups and should be able to
+        # run with both of them, `slow_momentum` should appear in optimizer's state
+        # for the second group.
+        for _ in range(3):
+            self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
+        self.assertIn("slow_momentum", list(slowmo_optim.state.values())[1])
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)
