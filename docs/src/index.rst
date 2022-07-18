@@ -21,18 +21,19 @@ for installation instructions.
 Documentation
 -------------
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :hidden:
    :caption: Torch Distributed Experimental
 
    Index <self>
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Features
 
    fake_tensor
    deferred_init
+   slow_momentum_fsdp
 
 .. toctree::
    :maxdepth: 1
