@@ -315,6 +315,14 @@ class TestCommunicationHooks(FSDPTest):
 
         self.assertEqual(slowmo_optim_dummy.averager.step, 2 * n_steps)
 
+        # Check abscent learning rate in a checkpoint
+        checkpoint = torch.load(chkpt, map_location=map_location)
+        del checkpoint["optim_state_dict"]["param_groups"][0]["lr"]
+        with self.assertRaisesRegex(
+            ValueError, "All parameter groups should have learning rate specified."
+        ):
+            slowmo_optim_dummy.load_state_dict(checkpoint["optim_state_dict"])
+
     @skip_if_lt_x_gpu(2)
     def test_slowmo_optimizer_errors(self):
         net = torch.nn.Linear(1, 3, bias=False)

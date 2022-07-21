@@ -95,11 +95,17 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
             raise ValueError("Base optimizer is a required parameter.")
         self._base_optim = base_optim
 
-        # check that base optimizer's learning rate is stored in param_groups
+        # check that base optimizer's `param_groups` are present
         if not (self._base_optim.param_groups):
             raise ValueError(
                 "Provided base optimizer does not have parameters specified."
             )
+        for group in self._base_optim.param_groups:
+            if "lr" not in group:
+                raise ValueError(
+                    "All parameter groups should have learning rate specified."
+                )
+
         self.param_groups = self._base_optim.param_groups
 
         if slowmo_freq < 1:
@@ -174,11 +180,13 @@ class SlowMomentumOptimizer(torch.optim.Optimizer):
         self.slowmo_lr = state_dict.pop("slowmo_lr")
         self.averager.step = state_dict.pop("step")
         self._base_optim.load_state_dict(state_dict)
-        # check that base optimizer's learning rate is stored in param_groups
-        if not (self.param_groups and self.param_groups[0]["lr"]):
-            raise ValueError(
-                "Base optimizer does not have parameters or learning rate specified."
-            )
+        if not self.param_groups:
+            raise ValueError("Base optimizer does not have parameter groups specified.")
+        for group in self._base_optim.param_groups:
+            if "lr" not in group:
+                raise ValueError(
+                    "All parameter groups should have learning rate specified."
+                )
 
     @torch.no_grad()
     def step(self):

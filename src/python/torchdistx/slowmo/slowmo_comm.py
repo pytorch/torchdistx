@@ -6,10 +6,10 @@
 
 import torch
 import torch.distributed as dist
-from torch.distributed.algorithms._comm_hooks import allreduce_hook as default
+from torch.distributed.algorithms._comm_hooks import default
 
 
-class SlowMoState(default.AllReduceState):
+class SlowMoState(default.DefaultState):
     r"""
     State for the `Slow Momentum <https://arxiv.org/abs/1910.00643>`_ .
 
