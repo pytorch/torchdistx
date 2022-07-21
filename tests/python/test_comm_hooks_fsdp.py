@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import sys
 import tempfile
 from typing import Optional
@@ -22,6 +23,7 @@ from torch.testing._internal.common_utils import (
     run_tests,
 )
 
+from torchdistx.gossip_grad import GossipGraDState, Topology, gossip_grad_hook
 from torchdistx.slowmo import slowmo_comm, slowmo_optimizer
 
 if not dist.is_available():
@@ -398,6 +400,174 @@ class TestCommunicationHooks(FSDPTest):
             self._train_step(inpt, fsdp_net_slowmo, slowmo_optim)
         for entry in slowmo_statedict["state"].values():
             self.assertIn("slow_momentum", entry)
+
+    @skip_if_lt_x_gpu(2)
+    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
+    def test_gossip_grad_state_init(self, sharding_strategy):
+        num_devices = torch.cuda.device_count()
+        with self.assertRaisesRegex(
+            ValueError,
+            "`local_process_group` and `num_nodes` should be provided together.",
+        ):
+            state = GossipGraDState(num_nodes=2)
+            state = GossipGraDState(
+                local_process_group=dist.new_group(ranks=[self.rank])
+            )
+        with self.assertRaisesRegex(
+            ValueError,
+            "Current implementation doesn't support uneven number"
+            " of nodes for CUBE topology.",
+        ):
+            state = GossipGraDState(
+                topology=Topology.CUBE,
+                local_process_group=dist.new_group(ranks=[self.rank]),
+                num_nodes=5,
+            )
+
+        state = GossipGraDState()
+        self.assertIsNotNone(state.topology)
+        self.assertEqual(state.topology, Topology.DISSEMINATION)
+        self.assertIsNotNone(state.num_nodes)
+        self.assertEqual(state.num_nodes, 1)
+        self.assertIsNotNone(state.local_process_group)
+        self.assertEqual(state.local_process_group.size(), num_devices)
+        self.assertEqual(state.proc_per_node, state.local_process_group.size())
+        if self.rank == 0:
+            self.assertEqual(state.master_process_group.size(), 1)
+        self.assertEqual(len(state.cur_topology), 1)
+        self.assertEqual(state.gossip_period, 1)
+        self.assertEqual(state.rank, self.rank)
+        self.assertEqual(state.master_worker, 0)
+
+        state = GossipGraDState(
+            topology=Topology.CUBE,
+            local_process_group=dist.new_group(ranks=[self.rank]),
+            num_nodes=num_devices,
+        )
+        self.assertEqual(state.topology, Topology.CUBE)
+
+    @skip_if_lt_x_gpu(6)
+    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
+    def test_gossip_grad_communication_dissimination(self, sharding_strategy):
+        # default simple net has size=(1, 5)
+        fsdp_net = self._init_fsdp(sharding_strategy)
+        inpt = torch.tensor(
+            [self.rank], dtype=torch.float, device=self.rank  # type: ignore[arg-type]
+        )
+        # The following setting is created:
+        # existing workers are assigned in groups of 2, each group is
+        # considered as a node.
+        local_process_group, _ = dist.new_subgroups(group_size=2)
+        master_ranks = list(range(0, torch.cuda.device_count(), 2))
+        master_process_group = dist.new_group(ranks=master_ranks)
+        num_nodes = torch.cuda.device_count() // 2
+        state = GossipGraDState(
+            topology=Topology.DISSEMINATION,
+            local_process_group=local_process_group,
+            num_nodes=num_nodes,
+            master_process_group=master_process_group,
+            proc_per_node=2,
+        )
+        fsdp_net.register_comm_hook(state, gossip_grad_hook)
+
+        # For this test there will be only one default (i.e. [0, 2, 4, ...])
+        # topology for ease of computation, thus mahually hardcode 1 topology
+        state.topologies = itertools.cycle([master_ranks])
+        state.cur_topology = next(state.topologies)
+        # There will be only `state.gossip_period` different communication peer changes,
+        # new iteration -> new peer.
+        # Thus, only checking `state.gossip_period` possible steps.
+        for _ in range(state.gossip_period):
+            loss = fsdp_net(inpt).sum()
+            loss.backward()
+            dist.barrier()
+            # For ease of computation, manually set virtual topology
+            power = (state.iter - 1) % state.gossip_period
+
+            # Next, I precompute estimated grads for rank 0
+            recvs_from = state.cur_topology[
+                (0 - 2**power + len(state.cur_topology)) % len(state.cur_topology)
+            ]
+
+            # Receiving grads are equal to 0.5 + the global rank of the neighboring node
+            # Gradients on the global node 0 (current node) are (0 + 1)/2 = 0.5
+            # Scaling factor is 0.5 since we have 2 nodes
+            estimated_grad = ((0.5 + recvs_from) + 0.5) * 0.5
+
+            if self.rank == 0 or self.rank == 1:
+                # Rank 1 should have same gradients as rank 0,
+                # because 0 broadcasts grads.
+                self.assertEqual(fsdp_net.params[0].grad[0], estimated_grad)
+
+            # Make sure that node 0 and last node have different gradients
+            # The only case, when these 2 will have the same gradients, is when
+            # we only have 2 nodes in total. This test skips those,
+            # since minimum requirement is 6 gpus = 3 nodes.
+            if self.rank == master_ranks[-1]:
+                # Other ranks should have different grads
+                self.assertNotEqual(fsdp_net.params[0].grad[0], estimated_grad)
+
+            fsdp_net.zero_grad()
+
+    @skip_if_lt_x_gpu(6)
+    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
+    def test_gossip_grad_communication_cube(self, sharding_strategy):
+        # default simple net has size=(1, 5)
+        fsdp_net = self._init_fsdp(sharding_strategy)
+        inpt = torch.tensor(
+            [self.rank], dtype=torch.float, device=self.rank  # type: ignore[arg-type]
+        )
+        # The following setting is created:
+        # existing workers are assigned in groups of 2, each group is
+        # considered as a node.
+        local_process_group, _ = dist.new_subgroups(group_size=1)
+        num_nodes = torch.cuda.device_count()
+        master_ranks = list(range(num_nodes))
+        master_process_group = dist.new_group(ranks=master_ranks)
+        state = GossipGraDState(
+            topology=Topology.CUBE,
+            local_process_group=local_process_group,
+            num_nodes=num_nodes,
+            master_process_group=master_process_group,
+            proc_per_node=1,
+        )
+        fsdp_net.register_comm_hook(state, gossip_grad_hook)
+
+        # For this test there will be only one default (i.e. [0, 1, 2, ...])
+        # topology for ease of computation, thus mahually hardcode 1 topology
+        state.topologies = itertools.cycle([master_ranks])
+        state.cur_topology = next(state.topologies)
+        # There will be only `state.gossip_period` different communication peer changes,
+        # new iteration -> new peer.
+        # Thus, only checking `state.gossip_period` possible steps.
+        for _ in range(state.gossip_period):
+            loss = fsdp_net(inpt).sum()
+            loss.backward()
+            dist.barrier()
+            # For ease of computation, manually set virtual topology
+            power = (state.iter - 1) % state.gossip_period
+
+            # Next, I precompute estimated grads for rank 0
+            recvs_from = state.cur_topology[(0 ^ 2**power) % len(state.cur_topology)]
+
+            # Receiving grads are equal to the global rank of the communication peer.
+            # This is because there is no intra-node reduction.
+            # Gradients on the global node 0 (current node) are (0 + 1)/2 = 0.5
+            # Scaling factor is 0.5 since we have 2 nodes
+            estimated_grad = (0 + recvs_from) * 0.5
+
+            if self.rank == 0 and self.rank == recvs_from:
+                # Rank 1 should have same gradients as rank 0,
+                # because 0 broadcasts grads.
+                self.assertEqual(fsdp_net.params[0].grad[0], estimated_grad)
+
+            # Make sure that node 0 and last node have different gradients
+            # Node 0 only communicates with nodes 1, 2, 4.
+            if self.rank == master_ranks[-1]:
+                # Other ranks should have different grads
+                self.assertNotEqual(fsdp_net.params[0].grad[0], estimated_grad)
+
+            fsdp_net.zero_grad()
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)
