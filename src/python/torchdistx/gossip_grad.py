@@ -18,7 +18,7 @@ from torch.distributed.algorithms._comm_hooks import default
 
 class Topology(Enum):
     r"""
-    Specify which topology will be used as a base for gradient communication.
+    Specifies which topology will be used as a base for gradient communication.
     For more information, please refer to the original
     `paper <https://arxiv.org/abs/1803.05880>`_
 
