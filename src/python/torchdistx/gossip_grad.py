@@ -23,7 +23,7 @@ class Topology(Enum):
     `paper <https://arxiv.org/abs/1803.05880>`_
 
     CUBE: A hypercube topology - a hierarchical virtual organization of compute nodes.
-        For this topology gossiping is happanning with a neighbouring vertex.
+        For this topology gossiping is happening with a neighboring vertex.
               *----*
              /|   /|
             *----* |
@@ -33,7 +33,7 @@ class Topology(Enum):
 
     DISSEMINATION: A dissemination topology has similar property
         as hypercube virtual topology.
-        For this topology gossiping is happanning with the neighbouring node,
+        For this topology gossiping is happening with the neighboring node,
         then every 2nd node, every 4th, etc.
 
             .  *  .
@@ -70,7 +70,7 @@ class GossipGraDState(default.DefaultState):
             By default is initialized to the number of generated local subgroups.
             (default: None)
         master_process_group (ProcessGroup): Stores main workers,
-            which are involved into a inter-node communication. By default, will be
+            which are involved in inter-node communication. By default, will be
             composed from the workers with ranks 0 in the local process group.
             (default: None)
 
@@ -178,13 +178,13 @@ class GossipGraDState(default.DefaultState):
 
 def _get_send_recv_peers(state):
     r"""
-    Computes peers for collective communication stage.
+    Computes peers for the collective communication stage.
     For a CUBE topology a node sends grads to and receives from
-    the same neighboring vertex. A pick for a neighboring vertext
+    the same neighboring vertex. A pick for a neighboring vertex
     depends on the step number and current virtual topology in use.
 
     For a DISSEMINATION topology a node typically sends grads
-    to and receives from different neighbours, but there may be a step
+    to and receives from different neighbors, but there may be a step
     where send and receive peers are the same node. A pick for send and receive peers
     depends on the step number and current virtual topology in use.
 
@@ -196,7 +196,7 @@ def _get_send_recv_peers(state):
 
     Returns:
         Peers' global ranks to whom a current node sends gradients
-        and from whom receives.
+        and from whom it is received.
     """
     assert state.gossip_period > 0, "`gossip_period` should be greater than 0."
     power = state.iter % state.gossip_period
@@ -291,7 +291,7 @@ def gossip_grad_hook(state: GossipGraDState, grad: torch.Tensor):
 
     Every ``state.gossip_period`` step a virtual topology is changed.
     Before an inter-node communication happens, gradients are reduced locally,
-    i.e. in a intra-node fashion.
+    i.e. in an intra-node fashion.
 
     Only workers from a master process group are participating in a gossiping stage.
     Finally, every main worker broadcasts final gradient to its local subgroup
@@ -329,7 +329,7 @@ def gossip_grad_hook(state: GossipGraDState, grad: torch.Tensor):
 
     # Reduce local gradients
     default.allreduce_hook(state, grad)
-    # Perform possiping step between master nodes (via master workers)
+    # Perform gossiping step between master nodes (via master workers)
     if not dist._rank_not_in_group(state.master_process_group):
         _gossip(state, grad)
     # Broadcast received gradients in the local process group

@@ -410,6 +410,10 @@ class TestCommunicationHooks(FSDPTest):
             "`local_process_group` and `num_nodes` should be provided together.",
         ):
             state = GossipGraDState(num_nodes=2)
+        with self.assertRaisesRegex(
+            ValueError,
+            "`local_process_group` and `num_nodes` should be provided together.",
+        ):
             state = GossipGraDState(
                 local_process_group=dist.new_group(ranks=[self.rank])
             )
