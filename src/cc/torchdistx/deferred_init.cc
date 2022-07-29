@@ -240,7 +240,8 @@ void Op::validateStack(const Stack& s) const {
                 value.isNone() ||
                 value.isString() ||
                 value.isTensor() ||
-                value.isTuple(),
+                value.isTuple() ||
+                value.isSymInt(),
           "`", name_, "` has an argument of type `", value.type()->str(), "` which is not "
           "supported in a deferred-init context.");
 
