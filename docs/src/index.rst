@@ -34,6 +34,7 @@ Documentation
    fake_tensor
    deferred_init
    slow_momentum_fsdp
+   gossip_grad
 
 .. toctree::
    :maxdepth: 1
