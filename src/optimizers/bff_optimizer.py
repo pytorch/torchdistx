@@ -4,9 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# BFF_Optimizer: a pure Bfloat16 AdamW optimizer with optional Kahan summation and direct control over
-# momentum, variance and auxiliary compensation buffer dtypes.
-# we use Kahan summation to offset the Bfloat16 precision reduction, allowing full training in BFloat16.
+# BFF_Optimizer: a pure Bfloat16 AdamW optimizer with optional Kahan summation
+# Features direct control over momentum, variance and auxiliary compensation 
+# buffer dtypes.
+# Kahan summation is used to offset Bfloat16 precision reduction for 
+# the weight updates, allowing full training in BFloat16.
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -38,8 +40,9 @@ class BFF_Optimizer(Optimizer):
                 weight_decay (float, optional): weight decay coefficient (default: 1e-2)
 
                 # BFF specific
-                use_kahan_summation = creates auxiliary buffer to ensure high precision model param updates
-                # use_matching_params_dtype = should the optimizer use the same dtype as model params? True = regular AdamW
+                use_kahan_summation = creates auxiliary buffer to ensure high precision model
+                param updates
+                
                 momentum_dtype = dtype for momentum
                 variance_dtype = dtype for uncentered variance
                 compensation_buffer_dtype = dtype for Kahan summation buffer
@@ -69,7 +72,6 @@ class BFF_Optimizer(Optimizer):
         """
         # self._cuda_graph_capture_health_check()
 
-        loss = None
         if closure is not None:
             with torch.enable_grad():
                 loss = closure()
