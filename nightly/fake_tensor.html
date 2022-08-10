@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Fake Tensor &mdash; torchdistX 0.2.0 documentation</title>
+  <title>Fake Tensor &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -207,7 +207,7 @@
               
               
                 <div class="version">
-                  0.2.0
+                  0.3.0.dev0
                 </div>
               
             
@@ -243,6 +243,8 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
 <ul>
@@ -357,11 +359,15 @@ context manager. Any tensor constructed within its scope will be forced to be
 fake.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="torchdistx.fake.fake_mode">
-<span class="sig-prename descclassname"><span class="pre">torchdistx.fake.</span></span><span class="sig-name descname"><span class="pre">fake_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/fake.html#fake_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.fake.fake_mode" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">torchdistx.fake.</span></span><span class="sig-name descname"><span class="pre">fake_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake_cuda</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/fake.html#fake_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.fake.fake_mode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Instantiates all tensors within its context as fake.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Iterator[None]</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fake_cuda</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, allows constructing fake CUDA tensors even if CUDA is
+not available. Ignored if CUDA is already available.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Generator</p>
 </dd>
 </dl>
 </dd></dl>

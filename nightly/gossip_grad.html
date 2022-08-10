@@ -6,10 +6,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; torchdistX 0.3.0.dev0 documentation</title>
+  <title>GossipGraD communication strategy for FullyShardedDataParallel training with NO_SHARD strategy &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -29,8 +30,10 @@
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="#" />
+    <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Fake Tensors &amp; Deferred Module Initialization" href="fake_tensor_and_deferred_init.html" />
+    <link rel="prev" title="Slow Momentum for FullyShardedDataParallel training with NO_SHARD strategy" href="slow_momentum_fsdp.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -237,11 +240,11 @@
 <li class="toctree-l1"><a class="reference internal" href="index.html">Index</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Features</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
 <ul>
@@ -286,12 +289,14 @@
       </li>
 
         
-      <li>Index</li>
+      <li>GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
+            <a href="_sources/gossip_grad.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -316,97 +321,154 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- <a href="#D"><strong>D</strong></a>
- | <a href="#F"><strong>F</strong></a>
- | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#M"><strong>M</strong></a>
- | <a href="#S"><strong>S</strong></a>
- | <a href="#T"><strong>T</strong></a>
- 
+  <section id="gossipgrad-communication-strategy-for-fullyshardeddataparallel-training-with-no-shard-strategy">
+<h1>GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy<a class="headerlink" href="#gossipgrad-communication-strategy-for-fullyshardeddataparallel-training-with-no-shard-strategy" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://arxiv.org/abs/1803.05880">GossipGraD</a> is a gossip communication protocol
+for a large-scale training, which can provide communication efficiency over global <cite>all_reduce</cite>
+strategy.</p>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdistx.gossip_grad.Topology">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdistx.gossip_grad.</span></span><span class="sig-name descname"><span class="pre">Topology</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/gossip_grad.html#Topology"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.gossip_grad.Topology" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specifies which topology will be used as a base for gradient communication.
+For more information, please refer to the original
+<a class="reference external" href="https://arxiv.org/abs/1803.05880">paper</a></p>
+<dl class="simple">
+<dt>CUBE:</dt><dd><p>A hypercube topology - a hierarchical virtual organization of compute nodes.
+For this topology gossiping is happening with a neighboring vertex.</p>
+</dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span>     <span class="o">*----*</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="o">/|</span>   <span class="o">/|</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">*----*</span> <span class="o">|</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">|</span> <span class="o">*</span> <span class="o">-|-*</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">|/</span>   <span class="o">|/</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">*----*</span>
+</pre></div>
 </div>
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.deferred_init">deferred_init() (in module torchdistx.deferred_init)</a>
-</li>
-  </ul></td>
-</tr></table>
+<dl class="simple">
+<dt>DISSEMINATION:</dt><dd><p>A dissemination topology has similar property
+as hypercube virtual topology.
+For this topology gossiping is happening with the neighboring node,
+then every 2nd node, every 4th, etc.</p>
+</dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span>       <span class="o">.</span>  <span class="o">*</span>  <span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>     <span class="o">*</span>          <span class="o">*</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">.</span>              <span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">*</span>              <span class="o">*</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">.</span>              <span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>     <span class="o">*</span>          <span class="o">*</span>
+<span class="gp">&gt;&gt;&gt; </span>       <span class="o">.</span>  <span class="o">*</span>  <span class="o">.</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Current implementation does not support uneven number of nodes for a CUBE
+topology.</p>
+</div>
+</dd></dl>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="fake_tensor.html#torchdistx.fake.fake_mode">fake_mode() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdistx.gossip_grad.GossipGraDState">
+<span class="sig-prename descclassname"><span class="pre">torchdistx.gossip_grad.</span></span><span class="sig-name descname"><span class="pre">GossipGraDState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_process_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_nodes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">master_process_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc_per_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2403</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/gossip_grad.html#GossipGraDState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.gossip_grad.GossipGraDState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stores state needed to perform GossipGraD algorithm within a communication hook.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Note that this hook should be used with the NCCL PG backend and users
+must set the current GPU device with <cite>torch.cuda.set_device</cite> prior to
+<code class="docutils literal notranslate"><span class="pre">GossipGraDState</span></code> initialization, otherwise it will lead to
+unexpected hang issues during the gossiping stage.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topology</strong> (<a class="reference internal" href="#torchdistx.gossip_grad.Topology" title="torchdistx.gossip_grad.Topology"><em>Topology</em></a>) – A virtual topology to be used for gradient communication.
+(default: DISSEMINATION)</p></li>
+<li><p><strong>local_process_group</strong> (<em>ProcessGroup</em>) – Stores local subgroup,
+where intra-node communication will happen,
+by default a subgroup is initialized to workers, belonging to the same node.
+Should be provided together with <cite>num_nodes</cite>. When every local process group
+contains only one worker, then this worker is considered to be a separate
+node and local <code class="docutils literal notranslate"><span class="pre">all_reduce</span></code> and <code class="docutils literal notranslate"><span class="pre">broadcast</span></code> are not performed.
+(default: None)</p></li>
+<li><p><strong>num_nodes</strong> (<em>int</em>) – Number of nodes in a compute environment.
+Should be provided together with <cite>local_process_group</cite>.
+By default is initialized to the number of generated local subgroups.
+(default: None)</p></li>
+<li><p><strong>master_process_group</strong> (<em>ProcessGroup</em>) – Stores main workers,
+which are involved in inter-node communication. By default, will be
+composed from the workers with rank 0 in the local process group.
+(default: None)</p></li>
+<li><p><strong>proc_per_node</strong> (<em>int</em>) – Number of workers in each node. By default is initialized
+to the size of a local subgroup.
+(default: None)</p></li>
+<li><p><strong>random_seed</strong> (<em>int</em>) – A random seed, so that randomly generated topologies
+were the same on every worker.
+(default: 2403)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-<h2 id="G">G</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.gossip_grad_hook">gossip_grad_hook (class in torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.GossipGraDState">GossipGraDState() (in module torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-</tr></table>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdistx.gossip_grad.gossip_grad_hook">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdistx.gossip_grad.</span></span><span class="sig-name descname"><span class="pre">gossip_grad_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/gossip_grad.html#gossip_grad_hook"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.gossip_grad.gossip_grad_hook" title="Permalink to this definition">¶</a></dt>
+<dd><p>Communication hook, that follows
+<a class="reference external" href="https://arxiv.org/abs/1803.05880">GossipGraD</a> strategy.</p>
+<p>Every <code class="docutils literal notranslate"><span class="pre">state.gossip_period</span></code> step a virtual topology is changed.
+Before an inter-node communication happens, gradients are reduced locally,
+i.e. in an intra-node fashion.</p>
+<p>Only workers from a master process group are participating in a gossiping stage.
+Finally, every main worker broadcasts final gradient to its local subgroup</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>GossipGradState</em>) – State for GossipGraD communication hook.</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A gradient for the local batch
+that needs to be communicated across ranks.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Here is an example for how to initialize a default <code class="docutils literal notranslate"><span class="pre">GossipGraD</span> <span class="pre">state</span></code>
+and register an fsdp model with a communication hook.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span> <span class="kn">import</span> <span class="nn">torch</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">from</span> <span class="nn">torch.distributed.fsdp</span> <span class="kn">import</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="n">FullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">from</span> <span class="nn">torchdistx.gossip_grad</span> <span class="kn">import</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">GossipGraDState</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">Topology</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">gossip_grad_hook</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">net</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">fsdp_net</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">state</span> <span class="o">=</span> <span class="n">GossipGraDState</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">fsdp_net</span><span class="o">.</span><span class="n">register_comm_hook</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">gossip_grad_hook</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
 
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="fake_tensor.html#torchdistx.fake.is_fake">is_fake() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.materialize_module">materialize_module() (in module torchdistx.deferred_init)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.materialize_tensor">materialize_tensor() (in module torchdistx.deferred_init)</a>
-</li>
-      <li><a href="fake_tensor.html#torchdistx.fake.meta_like">meta_like() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_comm.slowmo_hook">slowmo_hook() (in module torchdistx.slowmo.slowmo_comm)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_optimizer.SlowMomentumOptimizer">SlowMomentumOptimizer (class in torchdistx.slowmo.slowmo_optimizer)</a>
-</li>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_comm.SlowMoState">SlowMoState (class in torchdistx.slowmo.slowmo_comm)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="T">T</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.Topology">Topology (class in torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-</tr></table>
-
+</section>
+</section>
 
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fake_tensor_and_deferred_init.html" class="btn btn-neutral float-right" title="Fake Tensors &amp; Deferred Module Initialization" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="slow_momentum_fsdp.html" class="btn btn-neutral" title="Slow Momentum for FullyShardedDataParallel training with NO_SHARD strategy" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -435,7 +497,13 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a><ul>
+<li><a class="reference internal" href="#api">API</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>

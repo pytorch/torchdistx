@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torchdistx.deferred_init &mdash; torchdistX 0.2.0 documentation</title>
+  <title>torchdistx.deferred_init &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -204,7 +204,7 @@
               
               
                 <div class="version">
-                  0.2.0
+                  0.3.0.dev0
                 </div>
               
             
@@ -240,6 +240,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
 <ul>
@@ -321,7 +323,7 @@
 <span class="c1"># This source code is licensed under the BSD-style license found in the</span>
 <span class="c1"># LICENSE file in the root directory of this source tree.</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">Tensor</span>
 <span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">Module</span>
@@ -330,8 +332,10 @@
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">fake</span>  <span class="c1"># noqa: F401</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_C</span>
 
+<span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Module</span><span class="p">)</span>
 
-<div class="viewcode-block" id="deferred_init"><a class="viewcode-back" href="../../deferred_init.html#torchdistx.deferred_init.deferred_init">[docs]</a><span class="k">def</span> <span class="nf">deferred_init</span><span class="p">(</span><span class="n">module_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Module</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Module</span><span class="p">:</span>
+
+<div class="viewcode-block" id="deferred_init"><a class="viewcode-back" href="../../deferred_init.html#torchdistx.deferred_init.deferred_init">[docs]</a><span class="k">def</span> <span class="nf">deferred_init</span><span class="p">(</span><span class="n">module_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Defers the initialization of a ``Module``.</span>
 
 <span class="sd">    This function forces all tensors constructed within ``module_fn`` to be</span>
@@ -352,11 +356,36 @@
 <span class="sd">        to a module after its returned from ``deferred_init()``; otherwise it</span>
 <span class="sd">        cannot be correctly materialized.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_C</span><span class="o">.</span><span class="n">enable_deferred_init</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">_C</span><span class="o">.</span><span class="n">enter_deferred_init</span><span class="p">()</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">module_fn</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
-        <span class="n">_C</span><span class="o">.</span><span class="n">enable_deferred_init</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+        <span class="n">_C</span><span class="o">.</span><span class="n">leave_deferred_init</span><span class="p">()</span></div>
+
+
+<span class="k">def</span> <span class="nf">is_deferred</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Module</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Indicates whether the provided tensor or module has been constructed in</span>
+<span class="sd">    a deferred-init context.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        obj:</span>
+<span class="sd">            A ``Tensor`` or ``Module`` instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_C</span><span class="o">.</span><span class="n">can_materialize</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Module</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">prm</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">_C</span><span class="o">.</span><span class="n">can_materialize</span><span class="p">(</span><span class="n">prm</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="k">for</span> <span class="n">buf</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">buffers</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">_C</span><span class="o">.</span><span class="n">can_materialize</span><span class="p">(</span><span class="n">buf</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`obj` must be of type `Tensor` or `Module`.&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="materialize_tensor"><a class="viewcode-back" href="../../deferred_init.html#torchdistx.deferred_init.materialize_tensor">[docs]</a><span class="k">def</span> <span class="nf">materialize_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>

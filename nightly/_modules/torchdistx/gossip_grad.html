@@ -1,0 +1,958 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>torchdistx.gossip_grad &mdash; torchdistX 0.3.0.dev0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <!-- Google Analytics -->
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-117752657-2');
+    </script>
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  0.3.0.dev0
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Torch Distributed Experimental</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../fake_tensor.html">Fake Tensor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../fake_tensor_and_deferred_init.html">Fake Tensors &amp; Deferred Module Initialization</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+          <li><a href="../index.html">Module code</a> &gt;</li>
+        
+      <li>torchdistx.gossip_grad</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <h1>Source code for torchdistx.gossip_grad</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Meta Platforms, Inc. and affiliates.</span>
+<span class="c1"># All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># This source code is licensed under the BSD-style license found in the</span>
+<span class="c1"># LICENSE file in the root directory of this source tree.</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">auto</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="kn">from</span> <span class="nn">torch._C._distributed_c10d</span> <span class="kn">import</span> <span class="n">ProcessGroup</span>
+<span class="kn">from</span> <span class="nn">torch.distributed.algorithms._comm_hooks</span> <span class="kn">import</span> <span class="n">default</span>
+
+<span class="c1"># Setting a constant for situations, when communication peer</span>
+<span class="c1"># is not present in a current environment. This may happen in CUBE topology,</span>
+<span class="c1"># when a number of nodes is not equal to a power of 2. In this case, both</span>
+<span class="c1"># send and receive peers are equal to INVALID_PEER and no communication is</span>
+<span class="c1"># performed.</span>
+<span class="n">INVALID_PEER</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+
+<div class="viewcode-block" id="Topology"><a class="viewcode-back" href="../../gossip_grad.html#torchdistx.gossip_grad.Topology">[docs]</a><span class="k">class</span> <span class="nc">Topology</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specifies which topology will be used as a base for gradient communication.</span>
+<span class="sd">    For more information, please refer to the original</span>
+<span class="sd">    `paper &lt;https://arxiv.org/abs/1803.05880&gt;`_</span>
+
+<span class="sd">    CUBE:</span>
+<span class="sd">          A hypercube topology - a hierarchical virtual organization of compute nodes.</span>
+<span class="sd">          For this topology gossiping is happening with a neighboring vertex.</span>
+
+<span class="sd">    &gt;&gt;&gt;      *----*</span>
+<span class="sd">    &gt;&gt;&gt;     /|   /|</span>
+<span class="sd">    &gt;&gt;&gt;    *----* |</span>
+<span class="sd">    &gt;&gt;&gt;    | * -|-*</span>
+<span class="sd">    &gt;&gt;&gt;    |/   |/</span>
+<span class="sd">    &gt;&gt;&gt;    *----*</span>
+
+<span class="sd">    DISSEMINATION:</span>
+<span class="sd">                   A dissemination topology has similar property</span>
+<span class="sd">                   as hypercube virtual topology.</span>
+<span class="sd">                   For this topology gossiping is happening with the neighboring node,</span>
+<span class="sd">                   then every 2nd node, every 4th, etc.</span>
+
+<span class="sd">    &gt;&gt;&gt;        .  *  .</span>
+<span class="sd">    &gt;&gt;&gt;      *          *</span>
+<span class="sd">    &gt;&gt;&gt;    .              .</span>
+<span class="sd">    &gt;&gt;&gt;    *              *</span>
+<span class="sd">    &gt;&gt;&gt;    .              .</span>
+<span class="sd">    &gt;&gt;&gt;      *          *</span>
+<span class="sd">    &gt;&gt;&gt;        .  *  .</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        Current implementation does not support uneven number of nodes for a CUBE</span>
+<span class="sd">        topology.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">CUBE</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+    <span class="n">DISSEMINATION</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GossipGraDState"><a class="viewcode-back" href="../../gossip_grad.html#torchdistx.gossip_grad.GossipGraDState">[docs]</a><span class="k">class</span> <span class="nc">GossipGraDState</span><span class="p">(</span><span class="n">default</span><span class="o">.</span><span class="n">DefaultState</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores state needed to perform GossipGraD algorithm within a communication hook.</span>
+
+<span class="sd">    .. note:: Note that this hook should be used with the NCCL PG backend and users</span>
+<span class="sd">        must set the current GPU device with `torch.cuda.set_device` prior to</span>
+<span class="sd">        ``GossipGraDState`` initialization, otherwise it will lead to</span>
+<span class="sd">        unexpected hang issues during the gossiping stage.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        topology (Topology): A virtual topology to be used for gradient communication.</span>
+<span class="sd">            (default: DISSEMINATION)</span>
+<span class="sd">        local_process_group (ProcessGroup): Stores local subgroup,</span>
+<span class="sd">            where intra-node communication will happen,</span>
+<span class="sd">            by default a subgroup is initialized to workers, belonging to the same node.</span>
+<span class="sd">            Should be provided together with `num_nodes`. When every local process group</span>
+<span class="sd">            contains only one worker, then this worker is considered to be a separate</span>
+<span class="sd">            node and local ``all_reduce`` and ``broadcast`` are not performed.</span>
+<span class="sd">            (default: None)</span>
+<span class="sd">        num_nodes (int): Number of nodes in a compute environment.</span>
+<span class="sd">            Should be provided together with `local_process_group`.</span>
+<span class="sd">            By default is initialized to the number of generated local subgroups.</span>
+<span class="sd">            (default: None)</span>
+<span class="sd">        master_process_group (ProcessGroup): Stores main workers,</span>
+<span class="sd">            which are involved in inter-node communication. By default, will be</span>
+<span class="sd">            composed from the workers with rank 0 in the local process group.</span>
+<span class="sd">            (default: None)</span>
+<span class="sd">        proc_per_node (int): Number of workers in each node. By default is initialized</span>
+<span class="sd">            to the size of a local subgroup.</span>
+<span class="sd">            (default: None)</span>
+<span class="sd">        random_seed (int): A random seed, so that randomly generated topologies</span>
+<span class="sd">            were the same on every worker.</span>
+<span class="sd">            (default: 2403)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">topology</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">local_process_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">master_process_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">proc_per_node</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="o">=</span><span class="mi">2403</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">topology</span> <span class="ow">or</span> <span class="n">Topology</span><span class="o">.</span><span class="n">DISSEMINATION</span>
+        <span class="k">if</span> <span class="n">local_process_group</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">num_nodes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span><span class="p">,</span> <span class="n">subgroups</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_subgroups</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">subgroups</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">local_process_group</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">num_nodes</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="ow">or</span> <span class="n">local_process_group</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">num_nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;`local_process_group` and `num_nodes` should be provided together.&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span> <span class="o">=</span> <span class="n">local_process_group</span>
+            <span class="k">if</span> <span class="n">num_nodes</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`num_nodes` should be equal to 1 or more.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span> <span class="o">=</span> <span class="n">num_nodes</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">==</span> <span class="n">Topology</span><span class="o">.</span><span class="n">CUBE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Current implementation doesn&#39;t support uneven number&quot;</span>
+                <span class="s2">&quot; of nodes for CUBE topology.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proc_per_node</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">proc_per_node</span>
+            <span class="k">if</span> <span class="n">proc_per_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_per_node</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`proc_per_node` should be equal to 1 or more.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_process_group</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">master_process_group</span>
+            <span class="k">if</span> <span class="n">master_process_group</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_master_group</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span> <span class="o">=</span> <span class="n">random_seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_topologies</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cur_topology</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">)</span>
+
+        <span class="c1"># For `num_nodes` != power of 2 `gossip_period` should still be an int.</span>
+        <span class="c1"># If we only have 1 node, `gossip_period` should be equal to 1.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Get rank for current device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">get_rank</span><span class="p">()</span>
+
+        <span class="c1"># Master worker for a current local `process_group`</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_worker</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">distributed_c10d</span><span class="o">.</span><span class="n">_get_global_rank</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_master_group</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates master process group, i.e. a group of workers,</span>
+<span class="sd">        which communicate gradients between different nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Every 0th worker on every node will be assigned to a master group,</span>
+        <span class="c1"># i.e. if number of rocesses per node is 8, master group contains</span>
+        <span class="c1"># 0th, 8th, 16th, 24th, 32nd, ... ranks</span>
+        <span class="n">ranks</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_per_node</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_generate_topologies</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates `num_nodes` random topology shuffles and returns an infinite iterator.</span>
+<span class="sd">        Original topology is of the form:</span>
+<span class="sd">            [0*K, 1*K, ... , N*K],</span>
+<span class="sd">        where N is the number of nodes and K - the number of workers on each node.</span>
+<span class="sd">        For example, with N=4 and K=8, original topology is</span>
+<span class="sd">            [0, 8, 16, 24]</span>
+
+<span class="sd">        Workers&#39; rank values are used instead of node values for easier peer assignment</span>
+<span class="sd">        in a collective communication stage.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An infinite iterator over created topologies</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="n">topologies_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">original_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_per_node</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">):</span>
+            <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">original_list</span><span class="p">)</span>
+            <span class="n">topologies_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">original_list</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">cycle</span><span class="p">(</span><span class="n">topologies_set</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_get_send_recv_peers</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes peers for the collective communication stage.</span>
+<span class="sd">    For a ``CUBE`` topology a node sends grads to and receives from</span>
+<span class="sd">    the same neighboring vertex. A pick for a neighboring vertex</span>
+<span class="sd">    depends on the step number and current virtual topology in use.</span>
+
+<span class="sd">    For a ``DISSEMINATION`` topology a node typically sends grads</span>
+<span class="sd">    to and receives from different neighbors, but there may be a step</span>
+<span class="sd">    where send and receive peers are the same node. A pick for send and receive peers</span>
+<span class="sd">    depends on the step number and current virtual topology in use.</span>
+
+<span class="sd">    For more information, please refer to the original</span>
+<span class="sd">    `paper &lt;https://arxiv.org/abs/1803.05880&gt;`_</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (GossipGradState): State for GossipGraD communication hook.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Peers&#39; global ranks to whom a current node sends gradients</span>
+<span class="sd">        and from whom it is received.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;`gossip_period` should be greater than 0.&quot;</span>
+    <span class="n">power</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span>
+    <span class="c1"># Our new node_rank is a position of a global rank in</span>
+    <span class="c1"># a virtual topology</span>
+    <span class="n">node_rank</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">topology</span> <span class="o">==</span> <span class="n">Topology</span><span class="o">.</span><span class="n">CUBE</span><span class="p">:</span>
+        <span class="n">peer_idx</span> <span class="o">=</span> <span class="n">node_rank</span> <span class="o">^</span> <span class="mi">2</span><span class="o">**</span><span class="n">power</span>
+        <span class="k">if</span> <span class="n">peer_idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">INVALID_PEER</span><span class="p">,</span> <span class="n">INVALID_PEER</span>
+        <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="p">[</span><span class="n">peer_idx</span><span class="p">],</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="p">[</span><span class="n">peer_idx</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">state</span><span class="o">.</span><span class="n">topology</span> <span class="o">==</span> <span class="n">Topology</span><span class="o">.</span><span class="n">DISSEMINATION</span><span class="p">:</span>
+        <span class="n">send_peer_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">node_rank</span> <span class="o">+</span> <span class="mi">2</span><span class="o">**</span><span class="n">power</span><span class="p">)</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">num_nodes</span>
+        <span class="n">recv_peer_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">node_rank</span> <span class="o">-</span> <span class="mi">2</span><span class="o">**</span><span class="n">power</span> <span class="o">+</span> <span class="n">state</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">)</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">num_nodes</span>
+        <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="p">[</span><span class="n">send_peer_idx</span><span class="p">],</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="p">[</span><span class="n">recv_peer_idx</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_gossip</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">scaling_factor</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gossiping stage.</span>
+
+<span class="sd">    At this step, it obtains communication peers,</span>
+<span class="sd">    stacks ``torch.distributed.irecv`` and ``torch.distributed.isend`` operations,</span>
+<span class="sd">    and performs communication with ``torch.distributed.batch_isend_irecv``.</span>
+<span class="sd">    Finally, received and current gradients are added together</span>
+<span class="sd">    and scaled appropriately, i.e. since communication happens</span>
+<span class="sd">    only between 2 peers at a time, summed gradients are divided</span>
+<span class="sd">    by 2 (or multiplied by 0.5)</span>
+
+<span class="sd">    For more information, please refer to the original</span>
+<span class="sd">    `paper &lt;https://arxiv.org/abs/1803.05880&gt;`_</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (GossipGradState): State for GossipGraD communication hook.</span>
+<span class="sd">        grad (torch.Tensor): A gradient for the local batch</span>
+<span class="sd">            that needs to be communicated across ranks.</span>
+<span class="sd">        scaling_facto (float): Scaling factor to apply after</span>
+<span class="sd">            received and current gradients are combined.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">send_peer</span><span class="p">,</span> <span class="n">recv_peer</span> <span class="o">=</span> <span class="n">_get_send_recv_peers</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">send_peer</span> <span class="o">==</span> <span class="n">INVALID_PEER</span> <span class="ow">or</span> <span class="n">recv_peer</span> <span class="o">==</span> <span class="n">INVALID_PEER</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">assert</span> <span class="n">send_peer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">recv_peer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="p">(</span>
+        <span class="s2">&quot;Failed to calculate send and receive peers: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(`send_peer` is </span><span class="si">{</span><span class="n">send_peer</span><span class="si">}</span><span class="s2"> and `recv_peer` is </span><span class="si">{</span><span class="n">recv_peer</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span>
+    <span class="c1"># Need to check that send and receive peers are not equal to a current rank</span>
+    <span class="k">assert</span> <span class="n">send_peer</span> <span class="o">!=</span> <span class="n">state</span><span class="o">.</span><span class="n">rank</span> <span class="ow">and</span> <span class="n">recv_peer</span> <span class="o">!=</span> <span class="n">state</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="p">(</span>
+        <span class="s2">&quot;Expected send and receive peers to differ from a current rank: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(current rank is </span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">rank</span><span class="si">}</span><span class="s2">, `send_peer` is </span><span class="si">{</span><span class="n">send_peer</span><span class="si">}</span><span class="se">\</span>
+<span class="s2">        and `recv_peer` is </span><span class="si">{</span><span class="n">recv_peer</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="n">send_peer</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">recv_peer</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="p">),</span> <span class="s2">&quot;Communication peers are not present in a current topology&quot;</span>
+    <span class="n">recv_grad</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="n">ops</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># For ranks not in the `master_process_group`,</span>
+    <span class="c1"># `master_process_group` is an `object` instance</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">master_process_group</span><span class="p">,</span> <span class="n">ProcessGroup</span>
+    <span class="p">),</span> <span class="s2">&quot;`master_process_group` is not an instance of `ProcessGroup`&quot;</span>
+
+    <span class="n">ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">P2POp</span><span class="p">(</span>
+            <span class="n">op</span><span class="o">=</span><span class="n">dist</span><span class="o">.</span><span class="n">isend</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">grad</span><span class="p">,</span> <span class="n">peer</span><span class="o">=</span><span class="n">send_peer</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">master_process_group</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">P2POp</span><span class="p">(</span>
+            <span class="n">op</span><span class="o">=</span><span class="n">dist</span><span class="o">.</span><span class="n">irecv</span><span class="p">,</span>
+            <span class="n">tensor</span><span class="o">=</span><span class="n">recv_grad</span><span class="p">,</span>
+            <span class="n">peer</span><span class="o">=</span><span class="n">recv_peer</span><span class="p">,</span>
+            <span class="n">group</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">master_process_group</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">reqs</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">batch_isend_irecv</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">reqs</span><span class="p">:</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="n">grad</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">recv_grad</span><span class="p">)</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">scaling_factor</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="gossip_grad_hook"><a class="viewcode-back" href="../../gossip_grad.html#torchdistx.gossip_grad.gossip_grad_hook">[docs]</a><span class="k">def</span> <span class="nf">gossip_grad_hook</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">GossipGraDState</span><span class="p">,</span> <span class="n">grad</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Communication hook, that follows</span>
+<span class="sd">    `GossipGraD &lt;https://arxiv.org/abs/1803.05880&gt;`_ strategy.</span>
+
+<span class="sd">    Every ``state.gossip_period`` step a virtual topology is changed.</span>
+<span class="sd">    Before an inter-node communication happens, gradients are reduced locally,</span>
+<span class="sd">    i.e. in an intra-node fashion.</span>
+
+<span class="sd">    Only workers from a master process group are participating in a gossiping stage.</span>
+<span class="sd">    Finally, every main worker broadcasts final gradient to its local subgroup</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (GossipGradState): State for GossipGraD communication hook.</span>
+<span class="sd">        grad (torch.Tensor): A gradient for the local batch</span>
+<span class="sd">            that needs to be communicated across ranks.</span>
+
+<span class="sd">    Here is an example for how to initialize a default ``GossipGraD state``</span>
+<span class="sd">    and register an fsdp model with a communication hook.</span>
+<span class="sd">    ::</span>
+
+<span class="sd">        &gt;&gt;&gt;  import torch</span>
+<span class="sd">        &gt;&gt;&gt;  import torch.distributed as dist</span>
+<span class="sd">        &gt;&gt;&gt;  from torch.distributed.fsdp import(</span>
+<span class="sd">        &gt;&gt;&gt;    FullyShardedDataParallel as FSDP</span>
+<span class="sd">        &gt;&gt;&gt;  )</span>
+<span class="sd">        &gt;&gt;&gt;  from torchdistx.gossip_grad import(</span>
+<span class="sd">        &gt;&gt;&gt;     GossipGraDState,</span>
+<span class="sd">        &gt;&gt;&gt;     Topology,</span>
+<span class="sd">        &gt;&gt;&gt;     gossip_grad_hook</span>
+<span class="sd">        &gt;&gt;&gt;  )</span>
+<span class="sd">        &gt;&gt;&gt;</span>
+<span class="sd">        &gt;&gt;&gt;  net = torch.nn.Linear(4, 10)</span>
+<span class="sd">        &gt;&gt;&gt;  fsdp_net = FSDP(net)</span>
+<span class="sd">        &gt;&gt;&gt;  state = GossipGraDState()</span>
+<span class="sd">        &gt;&gt;&gt;  fsdp_net.register_comm_hook(state, gossip_grad_hook)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Virtual topology changes every `state.gossip_period` step</span>
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">topologies</span><span class="p">)</span>
+
+    <span class="c1"># Reduce local gradients</span>
+    <span class="n">default</span><span class="o">.</span><span class="n">allreduce_hook</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">grad</span><span class="p">)</span>
+    <span class="c1"># Perform gossiping step between master nodes (via master workers)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dist</span><span class="o">.</span><span class="n">_rank_not_in_group</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">master_process_group</span><span class="p">):</span>
+        <span class="n">_gossip</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">grad</span><span class="p">)</span>
+    <span class="c1"># Broadcast received gradients in the local process group</span>
+    <span class="n">dist</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">grad</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">master_worker</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">local_process_group</span><span class="p">)</span>
+
+    <span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">+=</span> <span class="mi">1</span></div>
+</pre></div>
+
+             </article>
+             
+            </div>
+            <footer>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright Meta Platforms, Inc. and affiliates.
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+         <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+         <script src="../../_static/jquery.js"></script>
+         <script src="../../_static/underscore.js"></script>
+         <script src="../../_static/doctools.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col follow-us-col">
+          <ul>
+            <li class="list-title">Stay Connected</li>
+          </ul>
+
+          <div class="footer-social-icons">
+            <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
+            <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

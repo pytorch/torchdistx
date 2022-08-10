@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Torch Distributed Experimental &mdash; torchdistX 0.2.0 documentation</title>
+  <title>Torch Distributed Experimental &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -206,7 +206,7 @@
               
               
                 <div class="version">
-                  0.2.0
+                  0.3.0.dev0
                 </div>
               
             
@@ -242,6 +242,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
 <ul>
@@ -348,8 +350,28 @@ for installation instructions.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Features</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fake_tensor.html#api">API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fake_tensor.html#use-cases">Use Cases</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#tl-dr">TL;DR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#problem">Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#what-is-deferred-module-initialization">What is Deferred Module Initialization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#api">API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="deferred_init.html#common-failure-patterns">Common Failure Patterns</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="slow_momentum_fsdp.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gossip_grad.html#api">API</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">

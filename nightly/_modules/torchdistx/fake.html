@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torchdistx.fake &mdash; torchdistX 0.2.0 documentation</title>
+  <title>torchdistx.fake &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -204,7 +204,7 @@
               
               
                 <div class="version">
-                  0.2.0
+                  0.3.0.dev0
                 </div>
               
             
@@ -240,6 +240,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../deferred_init.html">Deferred Module Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
 <ul>
@@ -322,7 +324,7 @@
 <span class="c1"># LICENSE file in the root directory of this source tree.</span>
 
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 
@@ -358,13 +360,19 @@
 
 
 <div class="viewcode-block" id="fake_mode"><a class="viewcode-back" href="../../fake_tensor.html#torchdistx.fake.fake_mode">[docs]</a><span class="nd">@contextmanager</span>
-<span class="k">def</span> <span class="nf">fake_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Instantiates all tensors within its context as fake.&quot;&quot;&quot;</span>
-    <span class="n">_C</span><span class="o">.</span><span class="n">enable_fake_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">fake_mode</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">fake_cuda</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Instantiates all tensors within its context as fake.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fake_cuda:</span>
+<span class="sd">            If ``True``, allows constructing fake CUDA tensors even if CUDA is</span>
+<span class="sd">            not available. Ignored if CUDA is already available.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_C</span><span class="o">.</span><span class="n">enter_fake_mode</span><span class="p">(</span><span class="n">fake_cuda</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">yield</span>
     <span class="k">finally</span><span class="p">:</span>
-        <span class="n">_C</span><span class="o">.</span><span class="n">enable_fake_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+        <span class="n">_C</span><span class="o">.</span><span class="n">leave_fake_mode</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="is_fake"><a class="viewcode-back" href="../../fake_tensor.html#torchdistx.fake.is_fake">[docs]</a><span class="k">def</span> <span class="nf">is_fake</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

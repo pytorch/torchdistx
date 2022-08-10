@@ -6,10 +6,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; torchdistX 0.3.0.dev0 documentation</title>
+  <title>Slow Momentum for FullyShardedDataParallel training with NO_SHARD strategy &mdash; torchdistX 0.3.0.dev0 documentation</title>
   
 
   
@@ -29,8 +30,10 @@
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="#" />
+    <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GossipGraD communication strategy for FullyShardedDataParallel training with NO_SHARD strategy" href="gossip_grad.html" />
+    <link rel="prev" title="Deferred Module Initialization" href="deferred_init.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -237,10 +240,10 @@
 <li class="toctree-l1"><a class="reference internal" href="index.html">Index</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Features</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="fake_tensor.html">Fake Tensor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deferred_init.html">Deferred Module Initialization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="slow_momentum_fsdp.html">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gossip_grad.html">GossipGraD communication strategy for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Design Notes</span></p>
@@ -286,12 +289,14 @@
       </li>
 
         
-      <li>Index</li>
+      <li>Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
+            <a href="_sources/slow_momentum_fsdp.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -316,97 +321,148 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
+  <section id="slow-momentum-for-fullyshardeddataparallel-training-with-no-shard-strategy">
+<h1>Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy<a class="headerlink" href="#slow-momentum-for-fullyshardeddataparallel-training-with-no-shard-strategy" title="Permalink to this headline">¶</a></h1>
+<p>Slow Momentum is a general framework to improve the accuracy of
+communication-efficient distributed training methods. The Slow Momentum algorithm
+requires exact-averaging of parameters before a momentum update, which is not feasible
+with sharded model parameters. As a result, the current implementation is
+available only for the FSDP <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy.</p>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<p>The API consists of <code class="docutils literal notranslate"><span class="pre">SlowMoState</span></code>, <code class="docutils literal notranslate"><span class="pre">slowmo_hook</span></code>, and <code class="docutils literal notranslate"><span class="pre">SlowMomentumOptimizer</span></code>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdistx.slowmo.slowmo_comm.SlowMoState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdistx.slowmo.slowmo_comm.</span></span><span class="sig-name descname"><span class="pre">SlowMoState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">subgroup</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_grads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/slowmo/slowmo_comm.html#SlowMoState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.slowmo.slowmo_comm.SlowMoState" title="Permalink to this definition">¶</a></dt>
+<dd><p>State for the <a class="reference external" href="https://arxiv.org/abs/1910.00643">Slow Momentum</a> .</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>subgroup</strong> (<em>ProcessGroup</em>) – stores subgroups, where communication will happen,
+by default a subgroup is initialized to workers,
+belonging to the same node.</p></li>
+<li><p><strong>sync_grads</strong> (<em>bool</em>) – if <cite>True</cite>, gradients will be communicated
+between members of the same subgroup (default: True).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-<h1 id="index">Index</h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdistx.slowmo.slowmo_comm.slowmo_hook">
+<span class="sig-prename descclassname"><span class="pre">torchdistx.slowmo.slowmo_comm.</span></span><span class="sig-name descname"><span class="pre">slowmo_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/slowmo/slowmo_comm.html#slowmo_hook"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.slowmo.slowmo_comm.slowmo_hook" title="Permalink to this definition">¶</a></dt>
+<dd><p>If <code class="docutils literal notranslate"><span class="pre">sync_grads</span></code> is enabled in the <code class="docutils literal notranslate"><span class="pre">state</span></code>,
+reduces gradients between workers under the same node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="#torchdistx.slowmo.slowmo_comm.SlowMoState" title="torchdistx.slowmo.slowmo_comm.SlowMoState"><em>SlowMoState</em></a>) – State information, configures
+if gradients are going to be communicated or not,
+and subgoups for gradient communication</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A gradient for the local batch
+that needs to be communicated across ranks.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-<div class="genindex-jumpbox">
- <a href="#D"><strong>D</strong></a>
- | <a href="#F"><strong>F</strong></a>
- | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#M"><strong>M</strong></a>
- | <a href="#S"><strong>S</strong></a>
- | <a href="#T"><strong>T</strong></a>
- 
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdistx.slowmo.slowmo_optimizer.SlowMomentumOptimizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdistx.slowmo.slowmo_optimizer.</span></span><span class="sig-name descname"><span class="pre">SlowMomentumOptimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_optim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowmo_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">48</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowmo_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowmo_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torchdistx/slowmo/slowmo_optimizer.html#SlowMomentumOptimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torchdistx.slowmo.slowmo_optimizer.SlowMomentumOptimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps an arbitrary <a class="reference external" href="https://pytorch.org/docs/stable/optim.html#torch.optim.Optimizer" title="(in PyTorch v1.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.optim.Optimizer</span></code></a> and runs
+FSDP distributed training with
+<a class="reference external" href="https://arxiv.org/abs/1910.00643">Slow Momentum</a>.
+Currently, only available for FSDP modules defined
+with a <cite>NO_SHARD</cite> strategy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_optim</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/optim.html#torch.optim.Optimizer" title="(in PyTorch v1.12)"><em>torch.optim.Optimizer</em></a>) – The base optimizer, which updates local instance of a model</p></li>
+<li><p><strong>slowmo_freq</strong> (<em>int</em>) – Specifies how often (number of iterations) slow momentum
+is to be performed (default: 48)</p></li>
+<li><p><strong>slowmo_factor</strong> (<em>float</em>) – This specifies the value of slowmo momentum
+to be used (default: 0.5)</p></li>
+<li><p><strong>slowmo_lr</strong> (<em>float</em>) – This specifies the value of slowmo learning rate
+to be used (default: 1.0)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span> <span class="kn">import</span> <span class="nn">torch</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">from</span> <span class="nn">torch.distributed.fsdp</span> <span class="kn">import</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="n">FullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="kn">from</span> <span class="nn">torchdistx.slowmo</span> <span class="kn">import</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_comm</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_optimizer</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">net</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">fsdp_net</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># This implementation communicates gradients between</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># workers of the same node</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># before averaging the model&#39;s parameters between nodes.</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># The following creates intra-node subgroups</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># and SlowMoState will take care of storing all required</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># parameters for intra-node communication,</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># i.e. pre- and post-division factors, and subgroups.</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># To disable any communication between workers,</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># set `sync_grads` to `False`</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">cur_subgroup</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_subgroups</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">slowmo_state</span> <span class="o">=</span> <span class="n">slowmo_comm</span><span class="o">.</span><span class="n">SlowMoState</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">cur_subgroup</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">sync_grads</span><span class="o">=</span><span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># Register SlowMo hook, which only communicates gradients</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># in a intra-node fashion.</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">fsdp_net</span><span class="o">.</span><span class="n">register_comm_hook</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_state</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_comm</span><span class="o">.</span><span class="n">slowmo_hook</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">base_optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">fsdp_net_slowmo</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">lr</span><span class="o">=</span><span class="mf">1e-2</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># Create a SlowMo optimizer that wraps a local optimizer.</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">slowmo_optim</span> <span class="o">=</span> <span class="n">slowmo_optimizer</span><span class="o">.</span><span class="n">SlowMomentumOptimizer</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">base_optim</span><span class="o">=</span><span class="n">base_optimizer</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_freq</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_factor</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_lr</span><span class="o">=</span><span class="mf">0.1</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># SlowMo runs intra-node gradient averaging at every step,</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># every 6th step it will run model averaging and</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># a slow momentum update.</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_optim</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">slowmo_optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
 </div>
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.deferred_init">deferred_init() (in module torchdistx.deferred_init)</a>
-</li>
-  </ul></td>
-</tr></table>
+</dd></dl>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="fake_tensor.html#torchdistx.fake.fake_mode">fake_mode() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="G">G</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.gossip_grad_hook">gossip_grad_hook (class in torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.GossipGraDState">GossipGraDState() (in module torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="fake_tensor.html#torchdistx.fake.is_fake">is_fake() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.materialize_module">materialize_module() (in module torchdistx.deferred_init)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="deferred_init.html#torchdistx.deferred_init.materialize_tensor">materialize_tensor() (in module torchdistx.deferred_init)</a>
-</li>
-      <li><a href="fake_tensor.html#torchdistx.fake.meta_like">meta_like() (in module torchdistx.fake)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_comm.slowmo_hook">slowmo_hook() (in module torchdistx.slowmo.slowmo_comm)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_optimizer.SlowMomentumOptimizer">SlowMomentumOptimizer (class in torchdistx.slowmo.slowmo_optimizer)</a>
-</li>
-      <li><a href="slow_momentum_fsdp.html#torchdistx.slowmo.slowmo_comm.SlowMoState">SlowMoState (class in torchdistx.slowmo.slowmo_comm)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="T">T</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="gossip_grad.html#torchdistx.gossip_grad.Topology">Topology (class in torchdistx.gossip_grad)</a>
-</li>
-  </ul></td>
-</tr></table>
-
+</section>
+</section>
 
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gossip_grad.html" class="btn btn-neutral float-right" title="GossipGraD communication strategy for FullyShardedDataParallel training with NO_SHARD strategy" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="deferred_init.html" class="btn btn-neutral" title="Deferred Module Initialization" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -435,7 +491,13 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Slow Momentum for <code class="docutils literal notranslate"><span class="pre">FullyShardedDataParallel</span></code> training with <code class="docutils literal notranslate"><span class="pre">NO_SHARD</span></code> strategy</a><ul>
+<li><a class="reference internal" href="#api">API</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
