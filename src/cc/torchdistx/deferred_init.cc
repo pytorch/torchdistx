@@ -1160,8 +1160,12 @@ void leaveDeferredInit() noexcept {
   }
 }
 
+bool canMaterialize(const Tensor& tensor) noexcept {
+  return isFake(tensor) && unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit);
+}
+
 Tensor materializeTensor(const Tensor& tensor) {
-  if (isFake(tensor) && unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit)) {
+  if (canMaterialize(tensor)) {
     return detail::materialize(tensor);
   } else {
     return tensor;
