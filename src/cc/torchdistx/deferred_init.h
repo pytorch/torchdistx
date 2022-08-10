@@ -25,6 +25,9 @@ namespace torchdistx {
 TDX_API void enterDeferredInit();
 TDX_API void leaveDeferredInit() noexcept;
 
+// Indicates whether `tensor` has been constructed in a deferred-init context.
+TDX_API bool canMaterialize(const at::Tensor& tensor) noexcept;
+
 // Materializes `tensor`.
 TDX_API at::Tensor materializeTensor(const at::Tensor& tensor);
 

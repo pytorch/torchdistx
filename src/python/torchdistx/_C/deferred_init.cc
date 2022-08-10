@@ -99,6 +99,7 @@ void initDeferredInitFunctions(py::module& m) {
   m.def("enter_deferred_init", enterDeferredInit);
   m.def("leave_deferred_init", leaveDeferredInit);
 
+  m.def("can_materialize", canMaterialize);
   m.def("materialize_tensor", materializeVariable);
 }
 

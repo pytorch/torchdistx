@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, Optional, TypeVar, Union
 
 from torch import Tensor
 from torch.nn import Module
@@ -42,6 +42,31 @@ def deferred_init(module_fn: Callable[..., T], *args, **kwargs) -> T:
         return module_fn(*args, **kwargs)
     finally:
         _C.leave_deferred_init()
+
+
+def is_deferred(obj: Union[Tensor, Module]) -> bool:
+    """Indicates whether the provided tensor or module has been constructed in
+    a deferred-init context.
+
+    Args:
+        obj:
+            A ``Tensor`` or ``Module`` instance.
+    """
+    if isinstance(obj, Tensor):
+        return _C.can_materialize(obj)
+
+    if isinstance(obj, Module):
+        for prm in obj.parameters():
+            if _C.can_materialize(prm):
+                return True
+
+        for buf in obj.buffers():
+            if _C.can_materialize(buf):
+                return True
+
+        return False
+
+    raise ValueError("`obj` must be of type `Tensor` or `Module`.")
 
 
 def materialize_tensor(tensor: Tensor) -> Tensor:
