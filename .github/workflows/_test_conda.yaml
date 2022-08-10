@@ -43,6 +43,7 @@ jobs:
                        --channel pytorch-nightly\
                        --channel conda-forge\
                        numpy\
+                       expecttest==0.1.3\
                        pytest==7.0.1\
                        python==${{ matrix.py }}\
                        torchdistx
