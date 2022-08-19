@@ -13,6 +13,7 @@ import torch
 import torch.distributed as dist
 from torch._C._distributed_c10d import ProcessGroup
 from torch.distributed.algorithms._comm_hooks import default
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
 # Setting a constant for situations, when communication peer
 # is not present in a current environment. This may happen in CUBE topology,
@@ -72,6 +73,8 @@ class GossipGraDState(default.DefaultState):
         unexpected hang issues during the gossiping stage.
 
     Args:
+        num_modules (int): Number of FSDP modules to identify how many communication
+            calls will be performed during a backpropagation pass.
         topology (Topology): A virtual topology to be used for gradient communication.
             (default: DISSEMINATION)
         local_process_group (ProcessGroup): Stores local subgroup,
@@ -100,6 +103,7 @@ class GossipGraDState(default.DefaultState):
 
     def __init__(
         self,
+        num_modules,
         topology=None,
         local_process_group=None,
         num_nodes=None,
@@ -107,7 +111,9 @@ class GossipGraDState(default.DefaultState):
         proc_per_node=None,
         random_seed=2403,
     ):
-
+        if num_modules is None or num_modules < 1:
+            raise ValueError("`num_nodes` should bea positive integer.")
+        self.num_modules = num_modules
         self.topology = topology or Topology.DISSEMINATION
         if local_process_group is None and num_nodes is None:
             self.local_process_group, subgroups = dist.new_subgroups()
@@ -224,7 +230,7 @@ def _get_send_recv_peers(state):
         and from whom it is received.
     """
     assert state.gossip_period > 0, "`gossip_period` should be greater than 0."
-    power = state.iter % state.gossip_period
+    power = (state.iter // state.num_modules) % state.gossip_period
     # Our new node_rank is a position of a global rank in
     # a virtual topology
     node_rank = state.cur_topology.index(state.rank)
@@ -310,6 +316,21 @@ def _gossip(state, grad, scaling_factor=0.5):
     grad.add_(recv_grad).mul_(scaling_factor)
 
 
+def get_num_modules(module: torch.nn.Module):
+    r"""
+    Returns number of FSDP modules in a provided FSDP instance.
+
+    Args:
+        module (torch.nn.Module): FSDP instance
+
+    Returns:
+        int: number of FSDP modules that are nested in the input ``module``,
+            including self.
+
+    """
+    return len(FSDP.fsdp_modules(module))
+
+
 def gossip_grad_hook(state: GossipGraDState, grad: torch.Tensor):
     r"""
     Communication hook, that follows
@@ -339,17 +360,22 @@ def gossip_grad_hook(state: GossipGraDState, grad: torch.Tensor):
         >>>  from torchdistx.gossip_grad import(
         >>>     GossipGraDState,
         >>>     Topology,
+        >>>     get_num_modules,
         >>>     gossip_grad_hook
         >>>  )
         >>>
         >>>  net = torch.nn.Linear(4, 10)
         >>>  fsdp_net = FSDP(net)
-        >>>  state = GossipGraDState()
+        >>>  state = GossipGraDState(num_modules=get_num_modules(fsdp_net))
         >>>  fsdp_net.register_comm_hook(state, gossip_grad_hook)
 
     """
-    # Virtual topology changes every `state.gossip_period` step
-    if state.iter % state.gossip_period == 0:
+    # Virtual topology changes every `state.gossip_period` step.
+    # FSDP net can consist of multiple FSDP modules and every module will
+    # increase `state.iter` during the backward pass. As a result, we need
+    # to adjust for this behavior and make sure that virtual topology doesn't
+    # change in the middle of the backward pass.
+    if (state.iter // state.num_modules) % state.gossip_period == 0:
         state.cur_topology = next(state.topologies)
 
     # Reduce local gradients

@@ -23,7 +23,12 @@ from torch.testing._internal.common_utils import (
     run_tests,
 )
 
-from torchdistx.gossip_grad import GossipGraDState, Topology, gossip_grad_hook
+from torchdistx.gossip_grad import (
+    GossipGraDState,
+    Topology,
+    get_num_modules,
+    gossip_grad_hook,
+)
 from torchdistx.slowmo import slowmo_comm, slowmo_optimizer
 
 if not dist.is_available():
@@ -407,15 +412,20 @@ class TestCommunicationHooks(FSDPTest):
         num_devices = torch.cuda.device_count()
         with self.assertRaisesRegex(
             ValueError,
+            "`num_nodes` should bea positive integer.",
+        ):
+            state = GossipGraDState(num_modules=None, num_nodes=2)
+        with self.assertRaisesRegex(
+            ValueError,
             "`local_process_group` and `num_nodes` should be provided together.",
         ):
-            state = GossipGraDState(num_nodes=2)
+            state = GossipGraDState(num_modules=1, num_nodes=2)
         with self.assertRaisesRegex(
             ValueError,
             "`local_process_group` and `num_nodes` should be provided together.",
         ):
             state = GossipGraDState(
-                local_process_group=dist.new_group(ranks=[self.rank])
+                num_modules=1, local_process_group=dist.new_group(ranks=[self.rank])
             )
         with self.assertRaisesRegex(
             ValueError,
@@ -423,12 +433,13 @@ class TestCommunicationHooks(FSDPTest):
             " of nodes for CUBE topology.",
         ):
             state = GossipGraDState(
+                num_modules=1,
                 topology=Topology.CUBE,
                 local_process_group=dist.new_group(ranks=[self.rank]),
                 num_nodes=5,
             )
 
-        state = GossipGraDState()
+        state = GossipGraDState(num_modules=1)
         self.assertIsNotNone(state.topology)
         self.assertEqual(state.topology, Topology.DISSEMINATION)
         self.assertIsNotNone(state.num_nodes)
@@ -444,6 +455,7 @@ class TestCommunicationHooks(FSDPTest):
         self.assertEqual(state.master_worker, 0)
 
         state = GossipGraDState(
+            num_modules=1,
             topology=Topology.CUBE,
             local_process_group=dist.new_group(ranks=[self.rank]),
             num_nodes=num_devices,
@@ -466,6 +478,7 @@ class TestCommunicationHooks(FSDPTest):
         master_process_group = dist.new_group(ranks=master_ranks)
         num_nodes = torch.cuda.device_count() // 2
         state = GossipGraDState(
+            num_modules=get_num_modules(fsdp_net),
             topology=Topology.DISSEMINATION,
             local_process_group=local_process_group,
             num_nodes=num_nodes,
@@ -521,6 +534,7 @@ class TestCommunicationHooks(FSDPTest):
         inpt = torch.tensor(
             [self.rank], dtype=torch.float, device=self.rank  # type: ignore[arg-type]
         )
+
         # The following setting is created:
         # existing workers are assigned in groups of 2, each group is
         # considered as a node.
@@ -529,6 +543,7 @@ class TestCommunicationHooks(FSDPTest):
         master_ranks = list(range(num_nodes))
         master_process_group = dist.new_group(ranks=master_ranks)
         state = GossipGraDState(
+            num_modules=get_num_modules(fsdp_net),
             topology=Topology.CUBE,
             local_process_group=local_process_group,
             num_nodes=num_nodes,
@@ -541,6 +556,7 @@ class TestCommunicationHooks(FSDPTest):
         # topology for ease of computation, thus mahually hardcode 1 topology
         state.topologies = itertools.cycle([master_ranks])
         state.cur_topology = next(state.topologies)
+
         # There will be only `state.gossip_period` different communication peer changes,
         # new iteration -> new peer.
         # Thus, only checking `state.gossip_period` possible steps.
@@ -572,6 +588,67 @@ class TestCommunicationHooks(FSDPTest):
                 self.assertNotEqual(fsdp_net.params[0].grad[0], estimated_grad)
 
             fsdp_net.zero_grad()
+
+    @skip_if_lt_x_gpu(2)
+    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
+    def test_gossip_grad_get_num_modules(self, sharding_strategy):
+        # default simple net has size=(1, 5)
+        fsdp_net = self._init_fsdp(
+            sharding_strategy,
+            net=Net(has_wrapping=True, sharding_strategy=sharding_strategy),
+        )
+        expected_num_modules = 3
+        self.assertEqual(expected_num_modules, get_num_modules(fsdp_net))
+
+    @skip_if_lt_x_gpu(2)
+    @parametrize("sharding_strategy", [ShardingStrategy.NO_SHARD])
+    def test_gossip_grad_iteration_correctness(self, sharding_strategy):
+        # default simple net has size=(1, 5)
+        fsdp_net = self._init_fsdp(
+            sharding_strategy,
+            net=Net(has_wrapping=True, sharding_strategy=sharding_strategy),
+        )
+        inpt = torch.randn(  # type: ignore[call-overload]
+            (7, 8), dtype=torch.float, device=self.rank
+        )
+
+        # The following setting is created:
+        # existing workers are assigned in groups of 2, each group is
+        # considered as a node.
+        local_process_group, _ = dist.new_subgroups(group_size=1)
+        num_nodes = torch.cuda.device_count()
+        master_ranks = list(range(num_nodes))
+        master_process_group = dist.new_group(ranks=master_ranks)
+        state = GossipGraDState(
+            num_modules=get_num_modules(fsdp_net),
+            topology=Topology.CUBE,
+            local_process_group=local_process_group,
+            num_nodes=num_nodes,
+            master_process_group=master_process_group,
+            proc_per_node=1,
+        )
+        fsdp_net.register_comm_hook(state, gossip_grad_hook)
+
+        # For this test there will be only one default (i.e. [0, 1, 2, ...])
+        # topology for ease of computation, thus mahually hardcode 1 topology
+        state.topologies = itertools.cycle([master_ranks])
+        state.cur_topology = next(state.topologies)
+        num_epochs = 5
+
+        # There will be only `state.gossip_period` different communication peer changes,
+        # new iteration -> new peer.
+        # Thus, only checking `state.gossip_period` possible steps.
+        for _ in range(num_epochs):
+            loss = fsdp_net(inpt).sum()
+            loss.backward()
+            fsdp_net.zero_grad()
+
+        # At this point state.iter should be equal to 15, because
+        # we have 3 FSDP modules in fsdp_net, thus in 5 iterations
+        # `state.iter` increases 3*num_epochstimes
+        expected_iteration = 3 * num_epochs
+        self.assertEqual(expected_iteration, state.iter)
+        self.assertEqual(num_epochs, state.iter // get_num_modules(fsdp_net))
 
 
 instantiate_parametrized_tests(TestCommunicationHooks)
