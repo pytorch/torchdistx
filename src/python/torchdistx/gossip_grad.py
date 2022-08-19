@@ -324,7 +324,8 @@ def get_num_modules(module: torch.nn.Module):
         module (torch.nn.Module): FSDP instance
 
     Returns:
-        int: number of FSDP modules that are nested in the input ``module``.
+        int: number of FSDP modules that are nested in the input ``module``,
+            including self.
 
     """
     return len(FSDP.fsdp_modules(module))
@@ -369,7 +370,11 @@ def gossip_grad_hook(state: GossipGraDState, grad: torch.Tensor):
         >>>  fsdp_net.register_comm_hook(state, gossip_grad_hook)
 
     """
-    # Virtual topology changes every `state.gossip_period` step
+    # Virtual topology changes every `state.gossip_period` step.
+    # FSDP net can consist of multiple FSDP modules and every module will
+    # increase `state.iter` during the backward pass. As a result, we need
+    # to adjust for this behavior and make sure that virtual topology doesn't
+    # change in the middle of the backward pass.
     if (state.iter // state.num_modules) % state.gossip_period == 0:
         state.cur_topology = next(state.topologies)
 

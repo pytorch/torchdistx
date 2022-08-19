@@ -560,7 +560,7 @@ class TestCommunicationHooks(FSDPTest):
         # There will be only `state.gossip_period` different communication peer changes,
         # new iteration -> new peer.
         # Thus, only checking `state.gossip_period` possible steps.
-        for _ in range(5):  # state.gossip_period):
+        for _ in range(state.gossip_period):
             loss = fsdp_net(inpt).sum()
             loss.backward()
             dist.barrier()
@@ -638,7 +638,7 @@ class TestCommunicationHooks(FSDPTest):
         # There will be only `state.gossip_period` different communication peer changes,
         # new iteration -> new peer.
         # Thus, only checking `state.gossip_period` possible steps.
-        for _ in range(num_epochs):  # state.gossip_period):
+        for _ in range(num_epochs):
             loss = fsdp_net(inpt).sum()
             loss.backward()
             fsdp_net.zero_grad()
