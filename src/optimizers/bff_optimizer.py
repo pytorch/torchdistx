@@ -4,7 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# Flexible_Precision_AdamW: a flexible precision AdamW optimizer with optional Kahan summation
+# Flexible_Precision_AdamW: a flexible precision AdamW optimizer
+# with optional Kahan summation for high precision weight updates.
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
 # Optional Kahan summation is used to offset precision reduction for
@@ -48,8 +49,8 @@ class Flexible_Precision_AdamW(Optimizer):
                                              buffer (default: BFloat16)
 
                 # Usage
-                This optimizer implements adaptive states, and Kahan summation
-                for flexible precision updates, all in user controlled dtypes.
+                This optimizer implements optimizer states, and Kahan summation
+                for high precision updates, all in user controlled dtypes.
                 Defaults are variance in BF16, Momentum in FP32.
                 This can be run in FSDP mixed precision, amp, or full precision,
                 depending on what training pipeline you wish to work with.
