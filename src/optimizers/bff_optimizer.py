@@ -4,10 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# BFF_Optimizer: a pure Bfloat16 AdamW optimizer with optional Kahan summation
+# Flexible_Precision_AdamW: a flexible precision AdamW optimizer with optional Kahan summation
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
-# Optional Kahan summation is used to offset Bfloat16 precision reduction for
+# Optional Kahan summation is used to offset precision reduction for
 # the weight updates. This allows full training in BFloat16 (with equal or
 # better than FP32 results) due to high precision weight upates.
 
@@ -15,7 +15,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 
 
-class BFF_AdamW(Optimizer):
+class Flexible_Precision_AdamW(Optimizer):
     def __init__(
         self,
         params,
@@ -23,8 +23,8 @@ class BFF_AdamW(Optimizer):
         betas=(0.9, 0.999),
         eps=1e-8,
         weight_decay=0.0,
-        use_kahan_summation=True,
-        momentum_dtype=torch.bfloat16,
+        use_kahan_summation=False,
+        momentum_dtype=torch.float32,
         variance_dtype=torch.bfloat16,
         compensation_buffer_dtype=torch.bfloat16,
     ):
@@ -39,18 +39,18 @@ class BFF_AdamW(Optimizer):
                     numerical stability (default: 1e-8)
                 weight_decay (float, optional): weight decay coefficient (default: 1e-2)
 
-                # BFF specific
+                # Flexible Precision specific
                 use_kahan_summation = creates auxiliary buffer to ensure high precision
                 model param updates (default: True)
-                momentum_dtype = dtype for momentum  (default: BFloat16)
+                momentum_dtype = dtype for momentum  (default: BFloat32)
                 variance_dtype = dtype for uncentered variance (default: BFloat16)
                 compensation_buffer_dtype  = dtype for Kahan summation
                                              buffer (default: BFloat16)
 
                 # Usage
                 This optimizer implements adaptive states, and Kahan summation
-                for high precision updates, all in user controlled dtypes.
-                All defaults are BF16 in order to enable training in full BFloat16.
+                for flexible precision updates, all in user controlled dtypes.
+                Defaults are variance in BF16, Momentum in FP32.
                 This can be run in FSDP mixed precision, amp, or full precision,
                 depending on what training pipeline you wish to work with.
 
@@ -114,14 +114,12 @@ class BFF_AdamW(Optimizer):
                     # momentum - EMA of gradient values
                     state["exp_avg"] = torch.zeros_like(
                         p,
-                        memory_format=torch.preserve_format,
                         dtype=momentum_dtype,
                     )
 
                     # variance uncentered - EMA of squared gradient values
                     state["exp_avg_sq"] = torch.zeros_like(
                         p,
-                        memory_format=torch.preserve_format,
                         dtype=variance_dtype,
                     )
 
@@ -129,7 +127,6 @@ class BFF_AdamW(Optimizer):
                     if use_kahan_summation:
                         state["compensation"] = torch.zeros_like(
                             p,
-                            memory_format=torch.preserve_format,
                             dtype=compensation_buffer_dtype,
                         )
 
