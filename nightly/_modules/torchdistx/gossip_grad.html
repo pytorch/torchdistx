@@ -332,6 +332,7 @@
 <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
 <span class="kn">from</span> <span class="nn">torch._C._distributed_c10d</span> <span class="kn">import</span> <span class="n">ProcessGroup</span>
 <span class="kn">from</span> <span class="nn">torch.distributed.algorithms._comm_hooks</span> <span class="kn">import</span> <span class="n">default</span>
+<span class="kn">from</span> <span class="nn">torch.distributed.fsdp</span> <span class="kn">import</span> <span class="n">FullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
 
 <span class="c1"># Setting a constant for situations, when communication peer</span>
 <span class="c1"># is not present in a current environment. This may happen in CUBE topology,</span>
@@ -391,6 +392,8 @@
 <span class="sd">        unexpected hang issues during the gossiping stage.</span>
 
 <span class="sd">    Args:</span>
+<span class="sd">        num_modules (int): Number of FSDP modules to identify how many communication</span>
+<span class="sd">            calls will be performed during a backpropagation pass.</span>
 <span class="sd">        topology (Topology): A virtual topology to be used for gradient communication.</span>
 <span class="sd">            (default: DISSEMINATION)</span>
 <span class="sd">        local_process_group (ProcessGroup): Stores local subgroup,</span>
@@ -419,6 +422,7 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
+        <span class="n">num_modules</span><span class="p">,</span>
         <span class="n">topology</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">local_process_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">num_nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -426,7 +430,9 @@
         <span class="n">proc_per_node</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">random_seed</span><span class="o">=</span><span class="mi">2403</span><span class="p">,</span>
     <span class="p">):</span>
-
+        <span class="k">if</span> <span class="n">num_modules</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">num_modules</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`num_nodes` should bea positive integer.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_modules</span> <span class="o">=</span> <span class="n">num_modules</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">topology</span> <span class="ow">or</span> <span class="n">Topology</span><span class="o">.</span><span class="n">DISSEMINATION</span>
         <span class="k">if</span> <span class="n">local_process_group</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">num_nodes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">local_process_group</span><span class="p">,</span> <span class="n">subgroups</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_subgroups</span><span class="p">()</span>
@@ -543,7 +549,7 @@
 <span class="sd">        and from whom it is received.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">assert</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;`gossip_period` should be greater than 0.&quot;</span>
-    <span class="n">power</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span>
+    <span class="n">power</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">//</span> <span class="n">state</span><span class="o">.</span><span class="n">num_modules</span><span class="p">)</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span>
     <span class="c1"># Our new node_rank is a position of a global rank in</span>
     <span class="c1"># a virtual topology</span>
     <span class="n">node_rank</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
@@ -629,6 +635,21 @@
     <span class="n">grad</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">recv_grad</span><span class="p">)</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">scaling_factor</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">get_num_modules</span><span class="p">(</span><span class="n">module</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns number of FSDP modules in a provided FSDP instance.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        module (torch.nn.Module): FSDP instance</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: number of FSDP modules that are nested in the input ``module``,</span>
+<span class="sd">            including self.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">FSDP</span><span class="o">.</span><span class="n">fsdp_modules</span><span class="p">(</span><span class="n">module</span><span class="p">))</span>
+
+
 <div class="viewcode-block" id="gossip_grad_hook"><a class="viewcode-back" href="../../gossip_grad.html#torchdistx.gossip_grad.gossip_grad_hook">[docs]</a><span class="k">def</span> <span class="nf">gossip_grad_hook</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">GossipGraDState</span><span class="p">,</span> <span class="n">grad</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Communication hook, that follows</span>
@@ -658,17 +679,22 @@
 <span class="sd">        &gt;&gt;&gt;  from torchdistx.gossip_grad import(</span>
 <span class="sd">        &gt;&gt;&gt;     GossipGraDState,</span>
 <span class="sd">        &gt;&gt;&gt;     Topology,</span>
+<span class="sd">        &gt;&gt;&gt;     get_num_modules,</span>
 <span class="sd">        &gt;&gt;&gt;     gossip_grad_hook</span>
 <span class="sd">        &gt;&gt;&gt;  )</span>
 <span class="sd">        &gt;&gt;&gt;</span>
 <span class="sd">        &gt;&gt;&gt;  net = torch.nn.Linear(4, 10)</span>
 <span class="sd">        &gt;&gt;&gt;  fsdp_net = FSDP(net)</span>
-<span class="sd">        &gt;&gt;&gt;  state = GossipGraDState()</span>
+<span class="sd">        &gt;&gt;&gt;  state = GossipGraDState(num_modules=get_num_modules(fsdp_net))</span>
 <span class="sd">        &gt;&gt;&gt;  fsdp_net.register_comm_hook(state, gossip_grad_hook)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Virtual topology changes every `state.gossip_period` step</span>
-    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="c1"># Virtual topology changes every `state.gossip_period` step.</span>
+    <span class="c1"># FSDP net can consist of multiple FSDP modules and every module will</span>
+    <span class="c1"># increase `state.iter` during the backward pass. As a result, we need</span>
+    <span class="c1"># to adjust for this behavior and make sure that virtual topology doesn&#39;t</span>
+    <span class="c1"># change in the middle of the backward pass.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">iter</span> <span class="o">//</span> <span class="n">state</span><span class="o">.</span><span class="n">num_modules</span><span class="p">)</span> <span class="o">%</span> <span class="n">state</span><span class="o">.</span><span class="n">gossip_period</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">state</span><span class="o">.</span><span class="n">cur_topology</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">topologies</span><span class="p">)</span>
 
     <span class="c1"># Reduce local gradients</span>
