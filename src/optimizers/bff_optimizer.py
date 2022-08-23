@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# MixedPrecisionAdamW: a flexible precision AdamW optimizer
+# AnyPrecisionAdamW: a flexible precision AdamW optimizer
 # with optional Kahan summation for high precision weight updates.
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
@@ -16,7 +16,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 
 
-class MixedPrecisionAdamW(Optimizer):
+class AnyPrecisionAdamW(Optimizer):
     def __init__(
         self,
         params,
@@ -40,7 +40,7 @@ class MixedPrecisionAdamW(Optimizer):
                     numerical stability (default: 1e-8)
                 weight_decay (float, optional): weight decay coefficient (default: 1e-2)
 
-                # Mixed Precision specific
+                # Any Precision specific
                 use_kahan_summation = creates auxiliary buffer to ensure high precision
                 model param updates (default: True)
                 momentum_dtype = dtype for momentum  (default: BFloat32)
@@ -91,7 +91,6 @@ class MixedPrecisionAdamW(Optimizer):
             lr = group["lr"]
             weight_decay = group["weight_decay"]
             eps = group["eps"]
-            # BFF specifics
             use_kahan_summation = group["use_kahan_summation"]
 
             momentum_dtype = group["momentum_dtype"]
