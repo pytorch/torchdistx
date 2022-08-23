@@ -16,7 +16,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 
 
-class Flexible_Precision_AdamW(Optimizer):
+class FlexiblePrecision_AdamW(Optimizer):
     def __init__(
         self,
         params,
