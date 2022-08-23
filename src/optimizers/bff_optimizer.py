@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# Flexible_Precision_AdamW: a flexible precision AdamW optimizer
+# FlexiblePrecision_AdamW: a flexible precision AdamW optimizer
 # with optional Kahan summation for high precision weight updates.
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
