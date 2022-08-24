@@ -9,8 +9,8 @@
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
 # Optional Kahan summation is used to offset precision reduction for
-# the weight updates. This allows full training in BFloat16 (with equal or
-# better than FP32 results) due to high precision weight upates.
+# the weight updates. This allows full training in BFloat16 (equal or
+# better than FP32 results in many cases) due to high precision weight upates.
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -42,7 +42,7 @@ class AnyPrecisionAdamW(Optimizer):
 
                 # Any Precision specific
                 use_kahan_summation = creates auxiliary buffer to ensure high precision
-                model param updates (default: True)
+                model param updates (default: False)
                 momentum_dtype = dtype for momentum  (default: BFloat32)
                 variance_dtype = dtype for uncentered variance (default: BFloat16)
                 compensation_buffer_dtype  = dtype for Kahan summation
@@ -102,7 +102,9 @@ class AnyPrecisionAdamW(Optimizer):
                     continue
 
                 if p.grad.is_sparse:
-                    raise RuntimeError("BFF does not support sparse gradients")
+                    raise RuntimeError(
+                        "AnyPrecisionAdamW does not support sparse gradients"
+                    )
 
                 state = self.state[p]
 
@@ -171,7 +173,7 @@ class AnyPrecisionAdamW(Optimizer):
 
                     # update weights with compensation (Kahan summation)
                     # save error back to compensation for next iteration
-                    temp_buffer = p.clone()
+                    temp_buffer = p.detach().clone()
                     p.data.add_(compensation)
                     compensation.add_(temp_buffer.sub_(p.data))
 
