@@ -31,33 +31,32 @@ class AnyPrecisionAdamW(Optimizer):
     ):
         """
         Args:
-                params (iterable): iterable of parameters to optimize or dicts defining
-                    parameter groups
-                lr (float, optional): learning rate (default: 1e-3)
-                betas (Tuple[float, float], optional): coefficients used for computing
-                    running averages of gradient and its square (default: (0.9, 0.999))
-                eps (float, optional): term added to the denominator to improve
-                    numerical stability (default: 1e-8)
-                weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+            params (iterable): iterable of parameters to optimize or dicts defining
+                parameter groups
+            lr (float, optional): learning rate (default: 1e-3)
+            betas (Tuple[float, float], optional): coefficients used for computing
+                running averages of gradient and its square (default: (0.9, 0.999))
+            eps (float, optional): term added to the denominator to improve
+                numerical stability (default: 1e-8)
+            weight_decay (float, optional): weight decay coefficient (default: 1e-2)
 
-                # Any Precision specific
-                use_kahan_summation = creates auxiliary buffer to ensure high precision
-                model param updates (default: False)
-                momentum_dtype = dtype for momentum  (default: BFloat32)
-                variance_dtype = dtype for uncentered variance (default: BFloat16)
-                compensation_buffer_dtype  = dtype for Kahan summation
-                                             buffer (default: BFloat16)
+            # Any Precision specific
+            use_kahan_summation = creates auxiliary buffer to ensure high precision
+            model param updates (default: False)
+            momentum_dtype = dtype for momentum  (default: BFloat32)
+            variance_dtype = dtype for uncentered variance (default: BFloat16)
+            compensation_buffer_dtype  = dtype for Kahan summation
+                                         buffer (default: BFloat16)
 
-                # Usage
-                This optimizer implements optimizer states, and Kahan summation
-                for high precision updates, all in user controlled dtypes.
-                Defaults are variance in BF16, Momentum in FP32.
-                This can be run in FSDP mixed precision, amp, or full precision,
-                depending on what training pipeline you wish to work with.
+            # Usage
+            This optimizer implements optimizer states, and Kahan summation
+            for high precision updates, all in user controlled dtypes.
+            Defaults are variance in BF16, Momentum in FP32.
+            This can be run in FSDP mixed precision, amp, or full precision,
+            depending on what training pipeline you wish to work with.
 
-                Setting to use_kahan_summation = False, and changing momentum and
-                variance dtypes to FP32, reverts this to a standard AdamW optimizer.
-
+            Setting to use_kahan_summation = False, and changing momentum and
+            variance dtypes to FP32, reverts this to a standard AdamW optimizer.
         """
         defaults = dict(
             lr=lr,
