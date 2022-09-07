@@ -4,38 +4,36 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import unittest
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from copy import deepcopy
-from torchdistx.optimizers import AnyPrecisionAdamW
-from torch.testing._internal.common_distributed import skip_if_lt_x_gpu
 from torch.testing._internal.common_utils import (
     TestCase,
-    run_tests,
-    parametrize,
     instantiate_parametrized_tests,
+    parametrize,
+    run_tests,
 )
-import unittest
+
+from torchdistx.optimizers import AnyPrecisionAdamW
 
 
 class TestAnyPrecisionOptimizer(TestCase):
-
     def _test_adam_equivalence(self, model, model_clone):
         # Test non-default options
         betas = (0.8, 0.88)
         weight_decay = 0.03
 
         adam_opt = optim.AdamW(
-            model_clone.parameters(),
-            betas=betas,
-            weight_decay=weight_decay
+            model_clone.parameters(), betas=betas, weight_decay=weight_decay
         )
         anyprecision_adam = AnyPrecisionAdamW(
             model.parameters(),
             variance_dtype=torch.float32,
             betas=betas,
-            weight_decay=weight_decay
+            weight_decay=weight_decay,
         )
 
         # Verify params are equal initially
@@ -70,9 +68,7 @@ class TestAnyPrecisionOptimizer(TestCase):
         if device == "cuda" and not torch.cuda.is_available():
             raise unittest.SkipTest("CUDA not available")
 
-        model = nn.Sequential(
-            nn.Linear(5, 5), nn.Linear(5, 5), nn.Linear(5, 5)
-        )
+        model = nn.Sequential(nn.Linear(5, 5), nn.Linear(5, 5), nn.Linear(5, 5))
         if device == "cuda":
             model.cuda()
 
@@ -85,3 +81,4 @@ instantiate_parametrized_tests(TestAnyPrecisionOptimizer)
 
 if __name__ == "__main__":
     run_tests()
+
