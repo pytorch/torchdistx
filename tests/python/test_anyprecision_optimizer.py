@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from copy import deepcopy
-from torchdistx.optimizers.anyprecision_optimizer import AnyPrecisionAdamW
+from torchdistx.optimizers import AnyPrecisionAdamW
 from torch.testing._internal.common_distributed import skip_if_lt_x_gpu
 from torch.testing._internal.common_utils import (
     TestCase,
