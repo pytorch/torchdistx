@@ -46,7 +46,8 @@ class AnyPrecisionAdamW(Optimizer):
             momentum_dtype = dtype for momentum  (default: BFloat32)
             variance_dtype = dtype for uncentered variance (default: BFloat16)
             compensation_buffer_dtype  = dtype for Kahan summation
-                                         buffer (default: BFloat16)
+                                         buffer (default: BFloat16). Only used if
+                                         ``use_kahan_summation=True``.
 
             # Usage
             This optimizer implements optimizer states, and Kahan summation
