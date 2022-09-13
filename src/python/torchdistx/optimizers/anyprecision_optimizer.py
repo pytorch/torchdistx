@@ -15,8 +15,25 @@
 import torch
 from torch.optim.optimizer import Optimizer
 
+# bfloat16 support checks
+from pkg_resources import packaging
+import torch.cuda.nccl as nccl
+import torch.distributed as dist
+
 
 class AnyPrecisionAdamW(Optimizer):
+    def verify_bfloat_support(
+        self,
+    ):
+        """verify gpu and network support for BF16"""
+        gpu_support = torch.version.cuda and torch.cuda.is_bf16_supported()
+        network_support = (
+            packaging.version.parse(torch.version.cuda).release >= (11, 0)
+            and dist.is_nccl_available()
+            and nccl.version() >= (2, 10)
+        )
+        return gpu_support, network_support
+
     def __init__(
         self,
         params,
@@ -31,33 +48,58 @@ class AnyPrecisionAdamW(Optimizer):
     ):
         """
         Args:
-            params (iterable): iterable of parameters to optimize or dicts defining
-                parameter groups
-            lr (float, optional): learning rate (default: 1e-3)
-            betas (Tuple[float, float], optional): coefficients used for computing
-                running averages of gradient and its square (default: (0.9, 0.999))
-            eps (float, optional): term added to the denominator to improve
-                numerical stability (default: 1e-8)
-            weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+                params (iterable): iterable of parameters to optimize or dicts defining
+                    parameter groups
+                lr (float, optional): learning rate (default: 1e-3)
+                betas (Tuple[float, float], optional): coefficients used for computing
+                    running averages of gradient and its square (default: (0.9, 0.999))
+                eps (float, optional): term added to the denominator to improve
+                    numerical stability (default: 1e-8)
+                weight_decay (float, optional): weight decay coefficient (default: 1e-2)
 
-            # Any Precision specific
-            use_kahan_summation = creates auxiliary buffer to ensure high precision
-            model param updates (default: False)
-            momentum_dtype = dtype for momentum  (default: BFloat32)
-            variance_dtype = dtype for uncentered variance (default: BFloat16)
-            compensation_buffer_dtype  = dtype for Kahan summation
-                                         buffer (default: BFloat16). Only used if
-                                         ``use_kahan_summation=True``.
+                # AnyPrecision specific
+                use_kahan_summation = use auxiliary buffer to ensure high precision
+                model param updates (default: False)
+                momentum_dtype = dtype for momentum  (default: BFloat32)
+                variance_dtype = dtype for uncentered variance (default: BFloat16)
+                compensation_buffer_dtype  = dtype for Kahan summation
+                                             buffer (default: BFloat16)
 
-            # Usage
-            This optimizer implements optimizer states, and Kahan summation
-            for high precision updates, all in user controlled dtypes.
-            Defaults are variance in BF16, Momentum in FP32.
-            This can be run in FSDP mixed precision, amp, or full precision,
-            depending on what training pipeline you wish to work with.
+                # Usage
+                This optimizer implements optimizer states, and Kahan summation
+                for high precision updates, all in user controlled dtypes.
+                The high precision updates enable successful training in pure
+                BF16 with corresponding reductions in memory and increases in
+                training speed.
 
-            Setting to use_kahan_summation = False, and changing momentum and
-            variance dtypes to FP32, reverts this to a standard AdamW optimizer.
+                Defaults are Variance in BF16, Momentum in FP32.
+                This can be run in FSDP mixed precision, amp, or full precision,
+                depending on what training pipeline you wish to work with.
+
+                Setting to use_kahan_summation = False, and changing momentum and
+                variance dtypes to FP32, reverts this to a standard AdamW optimizer.
+
+                To train in pure BF16:
+                1 - use model.to(torch.bfloat16) to move your model
+                to BF16.
+                2 - Set momentum_dtype and variance_dtype to torch.bfloat16
+                3 - Set use_kahan_summation = True
+
+                Example:
+                # init model
+                my_model = build_model(config_args)
+
+                # ensure model is moved to all bf16
+                my_model.to(torch.bfloat16)
+
+                # setup AnyPrecision to run in pure BF16 with high precision updates
+                optimizer = AnyPrecisionAdamW(my_model.parameters(), lr=lr, ...,
+                                momentum_dtype=torch.bfloat16,
+                                variance_dtype=torch.bfloat16,
+                                use_kahan_summation=True
+                                )
+
+
         """
         defaults = dict(
             lr=lr,
@@ -71,6 +113,27 @@ class AnyPrecisionAdamW(Optimizer):
         )
 
         super().__init__(params, defaults)
+
+        # confirm bfloat16 support if applicable
+        if (
+            torch.bfloat16
+            in [
+                momentum_dtype,
+                variance_dtype,
+            ]
+            or torch.bfloat16 in [compensation_buffer_dtype]
+            and use_kahan_summation == True
+        ):
+            gpu_support, network_support = self.verify_bfloat_support()
+            if not gpu_support:
+                print(
+                    f"Your GPU does not support native BFloat16.  Please adjust AnyPrecision optimizer params"
+                )
+            if not network_support:
+                print(
+                    f"Your NCCL version does not support BFloat16.  Please adjust AnyPrecision optimizer params"
+                )
+            raise ValueError("Missing BFloat16 support")
 
     @torch.no_grad()
     def step(self, closure=None):
