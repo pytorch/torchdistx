@@ -8,17 +8,17 @@
 # with optional Kahan summation for high precision weight updates.
 # Allows direct control over momentum, variance and auxiliary compensation
 # buffer dtypes.
-# Optional Kahan summation is used to offset precision reduction for
-# the weight updates. This allows full training in BFloat16 (equal or
-# better than FP32 results in many cases) due to high precision weight upates.
+# Optional Kahan summation is used to enable high precision for
+# the weight updates. This allows sucessful training in pure BFloat16
+# (often equal or better than FP32 results) due to high precision weight
+# updates, while training with reduced GPU memory and
+# increased training speed.
 
 import torch
-from torch.optim.optimizer import Optimizer
-
-# bfloat16 support checks
-from pkg_resources import packaging
 import torch.cuda.nccl as nccl
 import torch.distributed as dist
+from pkg_resources import packaging
+from torch.optim.optimizer import Optimizer
 
 
 class AnyPrecisionAdamW(Optimizer):
