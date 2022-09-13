@@ -125,18 +125,20 @@ class AnyPrecisionAdamW(Optimizer):
                 variance_dtype,
             ]
             or torch.bfloat16 in [compensation_buffer_dtype]
-            and use_kahan_summation == True
+            and use_kahan_summation
         ):
             gpu_support, network_support = self.verify_bfloat_support()
 
             if not gpu_support or not network_support:
                 if not gpu_support:
                     print(
-                        f"Your GPU does not support native BFloat16.  Please adjust AnyPrecision optimizer arguments."
+                        "Your GPU does not support native BFloat16. "
+                        "Please adjust AnyPrecision optimizer arguments."
                     )
                 if not network_support:
                     print(
-                        f"Your NCCL version does not support BFloat16.  Please adjust AnyPrecision optimizer arguments."
+                        "Your NCCL version does not support BFloat16. "
+                        "Please adjust AnyPrecision optimizer arguments."
                     )
                 raise ValueError("Missing BFloat16 support.")
 
