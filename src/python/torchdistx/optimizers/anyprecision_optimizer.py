@@ -79,6 +79,9 @@ class AnyPrecisionAdamW(Optimizer):
                 Setting to use_kahan_summation = False, and changing momentum and
                 variance dtypes to FP32, reverts this to a standard AdamW optimizer.
 
+                AnyPrecision will automatically verify proper support is present 
+                for BF16, for both GPU and network (NCCL). 
+
                 To train in pure BF16:
                 1 - use model.to(torch.bfloat16) to move your model
                 to BF16.
@@ -125,15 +128,17 @@ class AnyPrecisionAdamW(Optimizer):
             and use_kahan_summation == True
         ):
             gpu_support, network_support = self.verify_bfloat_support()
-            if not gpu_support:
-                print(
-                    f"Your GPU does not support native BFloat16.  Please adjust AnyPrecision optimizer params"
+
+            if not gpu_support or not network_support:
+                if not gpu_support:
+                    print(
+                    f"Your GPU does not support native BFloat16.  Please adjust AnyPrecision optimizer arguments."
                 )
-            if not network_support:
-                print(
-                    f"Your NCCL version does not support BFloat16.  Please adjust AnyPrecision optimizer params"
-                )
-            raise ValueError("Missing BFloat16 support")
+                if not network_support:
+                    print(
+                        f"Your NCCL version does not support BFloat16.  Please adjust AnyPrecision optimizer arguments."
+                    )
+                raise ValueError("Missing BFloat16 support.")
 
     @torch.no_grad()
     def step(self, closure=None):
