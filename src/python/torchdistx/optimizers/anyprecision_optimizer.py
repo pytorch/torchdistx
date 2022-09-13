@@ -17,23 +17,10 @@
 import torch
 import torch.cuda.nccl as nccl
 import torch.distributed as dist
-from pkg_resources import packaging
 from torch.optim.optimizer import Optimizer
 
 
 class AnyPrecisionAdamW(Optimizer):
-    def verify_bfloat_support(
-        self,
-    ):
-        """verify gpu and network support for BF16"""
-        gpu_support = torch.version.cuda and torch.cuda.is_bf16_supported()
-        network_support = (
-            packaging.version.parse(torch.version.cuda).release >= (11, 0)
-            and dist.is_nccl_available()
-            and nccl.version() >= (2, 10)
-        )
-        return gpu_support, network_support
-
     def __init__(
         self,
         params,
@@ -127,20 +114,17 @@ class AnyPrecisionAdamW(Optimizer):
             or torch.bfloat16 in [compensation_buffer_dtype]
             and use_kahan_summation
         ):
-            gpu_support, network_support = self.verify_bfloat_support()
+            gpu_support, network_support = self._verify_bfloat_support()
 
             if not gpu_support or not network_support:
+                reason = ""
                 if not gpu_support:
-                    print(
-                        "Your GPU does not support native BFloat16. "
-                        "Please adjust AnyPrecision optimizer arguments."
-                    )
+                    reason += "Your GPU does not support native Bfloat16. "
+
                 if not network_support:
-                    print(
-                        "Your NCCL version does not support BFloat16. "
-                        "Please adjust AnyPrecision optimizer arguments."
-                    )
-                raise ValueError("Missing BFloat16 support.")
+                    reason += "Your NCCL version does not support BFloat16. "
+
+                raise ValueError(f"Missing BFloat16 support. Details: {reason}")
 
     @torch.no_grad()
     def step(self, closure=None):
@@ -250,3 +234,26 @@ class AnyPrecisionAdamW(Optimizer):
                 else:
                     # usual AdamW updates
                     p.data.addcdiv_(exp_avg, centered_variance, value=-step_size)
+
+    def _verify_bfloat_support(
+        self,
+    ):
+        """verify gpu and network support for BF16"""
+        # requires cuda >= 11.0
+        required_cuda_major = 11
+
+        # requires nccl >= 2.10
+        required_nccl_major = 2
+        required_nccl_minor = 10
+
+        gpu_support = torch.version.cuda and torch.cuda.is_bf16_supported()
+
+        cuda_version_major, _ = torch.version.cuda.split(".", maxsplit=1)
+
+        network_support = (
+            int(cuda_version_major) >= required_cuda_major
+            and dist.is_nccl_available()
+            and nccl.version() >= (required_nccl_major, required_nccl_minor)
+        )
+
+        return gpu_support, network_support
