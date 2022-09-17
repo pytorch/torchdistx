@@ -5,3 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 __version__ = "0.3.0.dev0"
+
+from torchdistx import optimizers as optimizers
+from torchdistx import slowmo as slowmo
