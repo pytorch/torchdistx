@@ -21,8 +21,6 @@ using at::Tensor;
 
 using c10::impl::PyInterpreterStatus;
 
-using torch::TypeError;
-
 }  // namespace torchdistx
 
 namespace torchdistx::python {
@@ -60,9 +58,10 @@ py::object makeVariable(PyTypeObject* type, Tensor data) {
 py::object materializeVariable(const py::object& var) {
   PyObject* naked_var = var.ptr();
 
-  if (!THPVariable_Check(naked_var)) {
-    throw TypeError{"`var` has to be a `Variable`, but got `%s`.", Py_TYPE(naked_var)->tp_name};
-  }
+  TORCH_CHECK_TYPE(
+      THPVariable_Check(naked_var),
+      "`var` has to be a `Variable`, but got `%s`.",
+      Py_TYPE(naked_var)->tp_name);
 
   const Tensor& data = THPVariable_Unpack(naked_var);
 
