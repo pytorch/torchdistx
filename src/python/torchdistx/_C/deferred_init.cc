@@ -58,10 +58,8 @@ py::object makeVariable(PyTypeObject* type, Tensor data) {
 py::object materializeVariable(const py::object& var) {
   PyObject* naked_var = var.ptr();
 
-  TORCH_CHECK_TYPE(
-      THPVariable_Check(naked_var),
-      "`var` has to be a `Variable`, but got `%s`.",
-      Py_TYPE(naked_var)->tp_name);
+  TORCH_CHECK_TYPE(THPVariable_Check(naked_var), "`var` has to be a `Variable`, but got `%s`.",
+                   Py_TYPE(naked_var)->tp_name);
 
   const Tensor& data = THPVariable_Unpack(naked_var);
 
