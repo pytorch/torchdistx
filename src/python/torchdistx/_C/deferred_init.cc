@@ -8,6 +8,7 @@
 
 #include <ATen/Tensor.h>
 #include <c10/core/TensorImpl.h>
+#include <torch/csrc/PyInterpreter.h>
 #include <torch/csrc/autograd/python_variable.h>
 #include <torch/csrc/utils/pybind.h>
 #include <torchdistx/deferred_init.h>
@@ -40,7 +41,7 @@ py::object makeVariable(PyTypeObject* type, Tensor data) {
   constexpr auto s = PyInterpreterStatus::DEFINITELY_UNINITIALIZED;
 
   // Associate ATen and Python tensor instances.
-  data.unsafeGetTensorImpl()->init_pyobj(getPyInterpreter(), naked_obj, s);
+  data.unsafeGetTensorImpl()->pyobj_slot()->init_pyobj(getPyInterpreter(), naked_obj, s);
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   auto* var = reinterpret_cast<THPVariable*>(naked_obj);
@@ -83,7 +84,7 @@ py::object materializeVariable(const py::object& var) {
   // We might have already materialized `data`. Make sure that we preserve its
   // identity on the Python side and avoid creating a new Python tensor.
   c10::optional<PyObject*> opt_materialized_var =
-      materialized_data.unsafeGetTensorImpl()->check_pyobj(getPyInterpreter());
+      materialized_data.unsafeGetTensorImpl()->pyobj_slot()->check_pyobj(getPyInterpreter());
   if (opt_materialized_var.has_value()) {
     return py::reinterpret_borrow<py::object>(*opt_materialized_var);
   }
