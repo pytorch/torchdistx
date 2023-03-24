@@ -33,12 +33,12 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7'],
-          build_variant: ['cpu', 'cu102', 'cu113', 'cu116'],
+          py: ['3.8'],
+          build_variant: ['cpu', 'cu117', 'cu118'],
           sanitizer: ['nosan'],
           include: [
             {
-              py: '3.7',
+              py: '3.8',
               build_variant: 'cpu',
               sanitizer: 'asan_ubsan'
             }
@@ -52,13 +52,13 @@ jobs:
     with:
       matrix: |
         {
-          py: ['3.7'],
+          py: ['3.8'],
           build_variant: ['cpu'],
           sanitizer: ['nosan', 'asan_ubsan']
         }
 
-  test_wheel_cu102:
-    name: Test (CUDA 10.2)
+  test_wheel_cu117:
+    name: Test (CUDA 11.7)
     needs: test_wheel_cpu
     uses: ./.github/workflows/_test_wheel.yaml
     with:
@@ -66,40 +66,24 @@ jobs:
         {
           include: [
             {
-              py: '3.7',
-              build_variant: 'cu102',
+              py: '3.8',
+              build_variant: 'cu117',
               sanitizer: 'nosan'
             },
           ]
         }
 
-  test_wheel_cu113:
-    name: Test (CUDA 11.3)
-    needs: test_wheel_cu102
+  test_wheel_cu118:
+    name: Test (CUDA 11.8)
+    needs: test_wheel_cu117
     uses: ./.github/workflows/_test_wheel.yaml
     with:
       matrix: |
         {
           include: [
             {
-              py: '3.7',
-              build_variant: 'cu113',
-              sanitizer: 'nosan'
-            },
-          ]
-        }
-
-  test_wheel_cu116:
-    name: Test (CUDA 11.6)
-    needs: test_wheel_cu113
-    uses: ./.github/workflows/_test_wheel.yaml
-    with:
-      matrix: |
-        {
-          include: [
-            {
-              py: '3.7',
-              build_variant: 'cu116',
+              py: '3.8',
+              build_variant: 'cu118',
               sanitizer: 'nosan'
             },
           ]

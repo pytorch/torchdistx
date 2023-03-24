@@ -9,9 +9,8 @@
 set -o errexit
 
 curl --location --fail --output cuda.run\
-    https://developer.download.nvidia.com/compute/cuda/10.2/Prod/local_installers/cuda_10.2.89_440.33.01_linux.run
+    https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run
 
-# We have to specify `librarypath` due to an installation bug in CentOS7.
-sh cuda.run --silent --toolkit --override --no-man-page --librarypath=/usr/local/cuda-10.2
+sh cuda.run --silent --toolkit --override --no-man-page
 
 rm cuda.run

@@ -25,7 +25,7 @@ jobs:
     name: Build the Wheel package
     runs-on: ubuntu-18.04
     container:
-      image: ghcr.io/pytorch/torchdistx-ci-wheel:1-${{ matrix.build_variant }}
+      image: ghcr.io/pytorch/torchdistx-ci-wheel:2-${{ matrix.build_variant }}
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
