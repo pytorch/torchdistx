@@ -23,6 +23,8 @@ target_compile_features(torchdistx
 target_link_libraries(torchdistx
     PUBLIC
         torch
+    PRIVATE
+        Threads::Threads
 )
 
 torchdist_install(torchdistx
