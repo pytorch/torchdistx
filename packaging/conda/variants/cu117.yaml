@@ -1,7 +1,7 @@
 cuda:
-  - 11.6                  # [linux64]
+  - 11.7                  # [linux64]
 cuda_home:
-  - /usr/local/cuda-11.6  # [linux64]
+  - /usr/local/cuda-11.7  # [linux64]
 cudnn:
   - 8.3.2                 # [linux64]
 cxx_compiler_version:
