@@ -25,7 +25,7 @@ jobs:
     name: Build the Wheel package
     runs-on: ubuntu-18.04
     container:
-      image: ghcr.io/pytorch/torchdistx-ci-wheel:1-${{ matrix.build_variant }}
+      image: ghcr.io/pytorch/torchdistx-ci-wheel:2-${{ matrix.build_variant }}
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
@@ -54,19 +54,12 @@ jobs:
         run: |
           source ~/venvs/build/bin/activate
 
-          # We perform LTO only if no sanitizer is enabled since they do not
-          # play well together.
           if [[ $SANITIZER == "nosan" ]]; then
             unset SANITIZER
-
-            perform_lto=ON
-          else
-            perform_lto=OFF
           fi
 
           cmake -DCMAKE_BUILD_TYPE=Release\
                 -DTORCHDIST_TREAT_WARNINGS_AS_ERRORS=ON\
-                -DTORCHDIST_PERFORM_LTO=$perform_lto\
                 -DTORCHDIST_DEVELOP_PYTHON=OFF\
                 -DTORCHDIST_INSTALL_STANDALONE=ON\
                 -DTORCHDIST_SANITIZERS="${SANITIZER/_/;}"\

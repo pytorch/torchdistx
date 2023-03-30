@@ -22,7 +22,7 @@ torchdistX versions corresponding to each PyTorch release:
 
 | `torch`      | `torchdistx` | `python`          |
 | ------------ | ------------ | ----------------- |
-| `main`       | `main`       | `>=3.7`, `<=3.10` |
+| `main`       | `main`       | `>=3.8`, `<=3.10` |
 | `1.12.0`     | `0.2.0`      | `>=3.7`, `<=3.10` |
 | `1.11.0`     | `0.1.0`      | `>=3.7`, `<=3.9`  |
 

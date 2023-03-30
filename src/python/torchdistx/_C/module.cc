@@ -15,7 +15,6 @@ namespace py = pybind11;
 namespace torchdistx::python {
 namespace {
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void registerExceptionTranslator() {
   // NOLINTNEXTLINE(performance-unnecessary-value-param)
   py::register_exception_translator([](std::exception_ptr ex) {

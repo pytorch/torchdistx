@@ -26,7 +26,7 @@ jobs:
           submodules: recursive
       - name: Set up the Python virtual environment
         run: |
-          python3.7 -m venv ~/venvs/lint
+          python3.8 -m venv ~/venvs/lint
 
           source ~/venvs/lint/bin/activate
 

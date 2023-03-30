@@ -26,7 +26,7 @@ jobs:
           submodules: recursive
       - name: Set up the Python virtual environment
         run: |
-          python3.7 -m venv ~/venvs/docs
+          python3.8 -m venv ~/venvs/docs
 
           source ~/venvs/docs/bin/activate
 

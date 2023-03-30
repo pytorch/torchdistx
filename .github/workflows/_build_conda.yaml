@@ -25,7 +25,7 @@ jobs:
     name: Build the Conda packages
     runs-on: ubuntu-18.04
     container:
-      image: ghcr.io/pytorch/torchdistx-ci-conda:1-${{ matrix.build_variant }}
+      image: ghcr.io/pytorch/torchdistx-ci-conda:2-${{ matrix.build_variant }}
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
     steps:

@@ -16,11 +16,13 @@ Checks: "*,\
     -hicpp-*,\
     -llvm-*,
     -llvmlibc-*,
+    -misc-const-correctness,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,\
     -modernize-use-nodiscard,
     -modernize-use-trailing-return-type,
     -readability-else-after-return,
+    -readability-function-cognitive-complexity,
     -readability-identifier-length,
     -readability-named-parameter,
     -readability-redundant-access-specifiers"

@@ -22,7 +22,7 @@ jobs:
     name: Test the Conda packages
     runs-on: ubuntu-18.04
     container:
-      image: ghcr.io/pytorch/torchdistx-ci-conda:1-cpu
+      image: ghcr.io/pytorch/torchdistx-ci-conda:2-cpu
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
