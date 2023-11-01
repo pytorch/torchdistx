@@ -84,7 +84,7 @@ if(Python3_EXECUTABLE)
     )
 endif()
 
-find_package(Torch 1.13 REQUIRED PATHS ${torch_cmake_prefix_path})
+find_package(Torch 2.1.0 REQUIRED PATHS ${torch_cmake_prefix_path})
 
 # ------------------------------------------------------------
 # Targets
