@@ -173,6 +173,7 @@ class Op {
   }
 
   void materialize();
+  void materializeWithShape(c10::IntArrayRef shape, const c10::optional<c10::Device> device);
 
   std::size_t num_outputs() const noexcept {
     return num_outputs_;
@@ -220,7 +221,6 @@ Op Op::fromOperatorHandle(const OperatorHandle& handle, Stack s) {
   };
 
   const FunctionSchema& shm = handle.schema();
-
   return Op{shm.name(), std::move(fn), shm.arguments().size(), shm.returns().size(), std::move(s)};
 }
 
@@ -260,6 +260,44 @@ void Op::materialize() {
 
   {
     ThreadLocalStateGuard state_guard{*tls_};
+
+    fn_(stack_);
+  }
+
+  fn_ = nullptr;
+
+  tls_ = nullopt;
+
+  materialized_ = true;
+}
+
+void Op::materializeWithShape(c10::IntArrayRef shape, const c10::optional<c10::Device> device) {
+  if (materialized_) {
+    return;
+  }
+
+  {
+    ThreadLocalStateGuard state_guard{*tls_};
+
+    auto replace_first_shape = [&](c10::IntArrayRef sp){
+      IValue local_shape(sp);
+      stack_[0] = local_shape; 
+    };
+
+    std::vector<std::string> op_white_list{"aten::randn", "aten::rand", "aten::empty", "aten::ones", "aten::zeros", "aten::full" };
+
+    if (std::find(op_white_list.begin(),op_white_list.end(), name()) != op_white_list.end()){
+      // if the op is operator
+      replace_first_shape(shape);
+    }
+
+    if(device.has_value()){ // set target device 
+      for (size_t i = 0 ; i < stack_.size(); i++){
+        if(stack_[i].isDevice()){
+          stack_[i] = IValue(device.value());
+        }
+      }
+    }
 
     fn_(stack_);
   }
@@ -343,6 +381,8 @@ class OpNode {
   // Materializes the operation held by this node along with all the operations
   // in its recorded call stack.
   void materialize();
+  // with changed shape
+  void materializeWithShape(c10::IntArrayRef shape, c10::optional<c10::Device> device);
 
  private:
   void buildCallStack();
@@ -518,6 +558,30 @@ void OpNode::materialize() {
     node->materializeArguments();
 
     node->op_.materialize();
+
+    // Make sure that we deallocate parts of the operation graph that are not
+    // needed anymore.
+    node->detachDependencies();
+  }
+
+  call_stack_.clear();
+}
+
+void OpNode::materializeWithShape(c10::IntArrayRef shape, const c10::optional<c10::Device> device) {
+  // Do not try to shortcut this function by checking if the node is already
+  // materialized. A later in-place operation can still change the output of
+  // this node.
+
+  buildCallStack();
+
+  for (OpNode* node : call_stack_) {
+    if (node->op_.materialized()) {
+      continue;
+    }
+
+    node->materializeArguments();
+
+    node->op_.materializeWithShape(shape, device);
 
     // Make sure that we deallocate parts of the operation graph that are not
     // needed anymore.
@@ -716,6 +780,24 @@ Tensor materialize(const Tensor& fake) {
   const OpOutputDescriptor& output_desc = record.output_descriptor();
 
   output_desc.node()->materialize();
+
+  Tensor out = output_desc.node()->op().getOutput(output_desc.output_index());
+
+  // Unfortunately there is no way for us to track calls to `requires_grad_()`,
+  // so instead we explicitly set `requires_grad` after materialization.
+  if (fake.is_leaf() && fake.requires_grad()) {
+    out.set_requires_grad(true);
+  }
+
+  return out;
+}
+
+Tensor materialize_with_shape(const Tensor& fake, c10::IntArrayRef shape, const c10::optional<c10::Device> device) {
+  TensorRecord& record = getTensorRecord(fake);
+
+  const OpOutputDescriptor& output_desc = record.output_descriptor();
+
+  output_desc.node()->materializeWithShape(shape, device);
 
   Tensor out = output_desc.node()->op().getOutput(output_desc.output_index());
 
@@ -1032,6 +1114,12 @@ class ProxyVariableHooks : public VariableHooksInterface {
     inner_->requires_grad_(self, value);
   }
 
+  void basic_autograd_not_implemented_fallback(const c10::OperatorHandle& op,
+                                               c10::DispatchKeySet dispatch_keys,
+                                               torch::jit::Stack* stack) const override {
+    inner_->basic_autograd_not_implemented_fallback(op, dispatch_keys, stack);
+  }
+
   VariableHooksInterface* inner() noexcept {
     return inner_;
   }
@@ -1164,11 +1252,32 @@ bool canMaterialize(const Tensor& tensor) noexcept {
   return isFake(tensor) && unsafeAsFake(tensor).hasData(DispatchKey::DeferredInit);
 }
 
+
 Tensor materializeTensor(const Tensor& tensor) {
   if (canMaterialize(tensor)) {
     return detail::materialize(tensor);
   } else {
     return tensor;
+  }
+}
+
+Tensor materializeTensorWithLocalShape(const at::Tensor& tensor, c10::IntArrayRef shape, const c10::optional<c10::Device> device){
+  if (canMaterialize(tensor)) {
+    return detail::materialize_with_shape(tensor, shape, device);
+  } else {
+    return tensor;
+  }
+}
+
+bool isGenByRandomOp(const Tensor& tensor) noexcept{
+  if (canMaterialize(tensor)) {
+    detail::TensorRecord& record = detail::getTensorRecord(tensor);
+    const detail::OpOutputDescriptor& output_desc = record.output_descriptor();
+    auto name = output_desc.node()->op().name();
+    std::vector<std::string> op_white_list{"aten::randn", "aten::rand"};
+    return std::find(op_white_list.begin(),op_white_list.end(), name) != op_white_list.end();
+  }else{
+    return false;
   }
 }
 

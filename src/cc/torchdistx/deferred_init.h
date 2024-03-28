@@ -8,6 +8,8 @@
 
 #include <c10/core/DispatchKey.h>
 #include <c10/core/impl/LocalDispatchKeySet.h>
+#include <c10/core/SymIntArrayRef.h>
+#include <c10/core/Device.h>
 
 #include "macros.h"
 
@@ -27,9 +29,10 @@ TDX_API void leaveDeferredInit() noexcept;
 
 // Indicates whether `tensor` has been constructed in a deferred-init context.
 TDX_API bool canMaterialize(const at::Tensor& tensor) noexcept;
-
+TDX_API bool isGenByRandomOp(const at::Tensor& tensor) noexcept;
 // Materializes `tensor`.
 TDX_API at::Tensor materializeTensor(const at::Tensor& tensor);
+TDX_API at::Tensor materializeTensorWithLocalShape(const at::Tensor& tensor, c10::IntArrayRef shape, const c10::optional<c10::Device> device = {});
 
 // Temporarily disables deferred-init.
 class TDX_API NoDeferredInit {
