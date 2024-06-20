@@ -173,7 +173,7 @@ def main() -> None:
         zip_safe=False,
         # Since PyTorch does not offer ABI compatibility we have to make sure
         # that we use the same version that was used at build time.
-        install_requires=[f"torch=={torch.__version__}"],
+        # install_requires=[f"torch=={torch.__version__}"],
         classifiers=[
             "Development Status :: 3 - Alpha",
             "Intended Audience :: Developers",

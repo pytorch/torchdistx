@@ -8,7 +8,12 @@
 
 #include <ATen/Context.h>
 #include <ATen/Tensor.h>
+#include <torch/torch.h>
+#if TORCH_VERSION_MAJOR >= 2 && TORCH_VERSION_MINOR>=3
+#include <torch/csrc/utils/device_lazy_init.h>
+#else
 #include <torch/csrc/utils/cuda_lazy_init.h>
+#endif
 #include <torch/csrc/utils/pybind.h>
 #include <torchdistx/fake.h>
 
@@ -22,7 +27,12 @@ void pyEnterFakeMode(bool fake_cuda) {
   // subsystem which would fail and prevent us from instantiating CUDA devices.
   if (fake_cuda) {
     if (!at::hasCUDA()) {
+
+#if TORCH_VERSION_MAJOR >= 2 && TORCH_VERSION_MINOR>=3
+      torch::utils::set_requires_device_init(at::kCUDA, false);
+#else
       torch::utils::set_requires_cuda_init(false);
+#endif
     }
   }
 }
@@ -31,7 +41,11 @@ void pyLeaveFakeMode() {
   leaveFakeMode();
 
   if (!isFakeModeActive() && !at::hasCUDA()) {
+#if TORCH_VERSION_MAJOR >= 2 && TORCH_VERSION_MINOR>=3
+      torch::utils::set_requires_device_init(at::kCUDA, true);
+#else
     torch::utils::set_requires_cuda_init(true);
+#endif
   }
 }
 
