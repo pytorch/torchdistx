@@ -1032,6 +1032,12 @@ class ProxyVariableHooks : public VariableHooksInterface {
     inner_->requires_grad_(self, value);
   }
 
+  void basic_autograd_not_implemented_fallback(const c10::OperatorHandle& op,
+                                               c10::DispatchKeySet dispatch_keys,
+                                               torch::jit::Stack* stack) const override {
+    inner_->basic_autograd_not_implemented_fallback(op, dispatch_keys, stack);
+  }
+
   VariableHooksInterface* inner() noexcept {
     return inner_;
   }
